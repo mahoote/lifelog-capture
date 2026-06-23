@@ -1,7 +1,7 @@
 import threading
 from signal import pause
 from gpiozero import LED, Button
-from util import blink_loop, shutdown_pi
+from utils import blink_loop, shutdown_pi
 
 LED_GPIO = 4
 BUTTON_GPIO = 26
