@@ -1,3 +1,3 @@
-from capture import run_capture
+from utils import led_loop
 
-run_capture()
+led_loop()
