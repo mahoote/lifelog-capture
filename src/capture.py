@@ -35,15 +35,14 @@ def run_capture(
         camera_started = True
 
         while not stop_event.is_set():
-            # TODO: Use when transfer mode is implemented
-            # if not capture_mode_event.is_set():
-            #     led_off()
-            #     stop_event.wait(timeout=0.25)
-            #     continue
+            if not capture_mode_event.is_set():
+                led_off()
+                stop_event.wait(timeout=0.25)
+                continue
 
             led_on()
 
-            if _motion.is_moving:
+            if motion.is_moving:
                 _capture_video()
             else:
                 _capture_photo()
@@ -100,7 +99,7 @@ def _capture_video() -> None:
         kwargs={
             "stop_event": video_blink_stop_event,
             "on_period_s": 0.25,
-            "off_period_s": 0.75,
+            "off_period_s": 0.1,
         },
         daemon=True,
     )
