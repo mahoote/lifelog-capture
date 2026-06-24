@@ -45,7 +45,7 @@ class CameraDriver:
         self.picam2.configure(self.photo_config)
         self.picam2.start()
 
-    def capture_jpeg(self, quality: int = 85) -> Path:
+    def capture_jpeg(self) -> Path:
         """
         Capture a JPEG image, save it under footage/<timestamp>.jpeg,
         and return the saved file path.
@@ -53,11 +53,6 @@ class CameraDriver:
         The camera switches to still mode, captures a JPEG image,
         temporarily stores it on disk, and then reads the file back
         into memory.
-
-        Args:
-            quality: JPEG compression quality from 1 to 100.
-                     Higher values give better image quality but
-                     produce larger files. Default is 85.
 
         Returns:
             Path: The path to the saved JPEG image.
@@ -68,7 +63,6 @@ class CameraDriver:
         self.picam2.capture_file(
             str(out_path),
             format="jpeg",
-            quality=quality,
         )
         return out_path
 

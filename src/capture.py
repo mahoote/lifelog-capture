@@ -11,7 +11,6 @@ _clock = None
 
 _capture_interval = 60
 _video_duration = 10
-_photo_quality = 95
 
 
 def run_capture(stop_event: threading.Event, capture_mode_event: threading.Event) -> None:
@@ -60,7 +59,7 @@ def _capture_photo() -> None:
     """
     Captures a photo and saves it to the storage.
     """
-    footage_path = _camera.capture_jpeg(_photo_quality)
+    footage_path = _camera.capture_jpeg()
     # TODO: save footage_path to storage
 
 
