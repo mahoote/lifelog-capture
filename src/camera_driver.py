@@ -26,8 +26,13 @@ class CameraDriver:
             self.video_config: Configuration used for video recording.
         """
         self.picam2: Picamera2 = Picamera2()
-        self.photo_config: dict = self.picam2.create_still_configuration()
-        self.video_config: dict = self.picam2.create_video_configuration()
+        self.photo_config: dict = self.picam2.create_still_configuration(
+            main={"size": (1920, 1080)}
+        )
+
+        self.video_config: dict = self.picam2.create_video_configuration(
+            main={"size": (1280, 720)}
+        )
 
         self.footage_dir = Path(footage_dir)
         self.footage_dir.mkdir(parents=True, exist_ok=True)
@@ -44,6 +49,7 @@ class CameraDriver:
         """
         self.picam2.configure(self.photo_config)
         self.picam2.start()
+        sleep(1)
 
     def capture_jpeg(self) -> Path:
         """
