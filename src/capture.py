@@ -1,6 +1,6 @@
 import threading
-from time import sleep
 from src.camera_driver import CameraDriver
+from src.led_utils import led_on, led_off, led_blink_loop
 from src.motion_detector import MotionDetector
 from src.utils import wait_for_next_capture
 
@@ -19,9 +19,14 @@ def run_capture(stop_event: threading.Event, capture_mode_event: threading.Event
     Runs a loop to capture photos and videos.
     Will also detect motion and set the capture interval and mode based on it.
     """
+    camera_started = False
+    errored = False
+
     print('Running capture loop')
     try:
+        led_on()
         _camera.start_camera()
+        camera_started = True
 
         while not stop_event.is_set() and capture_mode_event.is_set():
             if _motion.is_moving:
@@ -40,9 +45,15 @@ def run_capture(stop_event: threading.Event, capture_mode_event: threading.Event
 
     except Exception as e:
         print(f"Error running capture logic: {e}")
+        errored = True
     finally:
         print('Stopping capture loop')
-        _camera.stop_camera()
+        led_off()
+        if camera_started:
+            _camera.stop_camera()
+
+    if errored and not stop_event.is_set():
+        led_blink_loop(stop_event=stop_event, period_s=0.5)
 
 
 def _capture_photo() -> None:
