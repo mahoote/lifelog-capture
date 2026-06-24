@@ -4,7 +4,7 @@ from signal import pause
 from gpiozero import Button
 
 from src.button_utils import create_button_handlers
-from src.capture import run_capture
+from src.capture import run_capture, motion
 
 BUTTON_GPIO = 26
 
@@ -28,7 +28,7 @@ capture_thread = threading.Thread(
 
 handle_long_press, handle_button_release = create_button_handlers(
     stop_event,
-    capture_mode_event,
+    motion,
     capture_thread,
 )
 

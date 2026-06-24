@@ -4,8 +4,8 @@ from src.led_utils import led_on, led_off, led_blink_loop, led_blink
 from src.motion_detector import MotionDetector
 from src.utils import wait_for_next_capture
 
+motion = MotionDetector()
 _camera = CameraDriver()
-_motion = MotionDetector()
 _storage = None
 _clock = None
 
@@ -43,8 +43,7 @@ def run_capture(
 
             led_on()
 
-            if not capture_mode_event.is_set():
-                # TODO: use _motion.is_moving when motion detection is implemented
+            if _motion.is_moving:
                 _capture_video()
             else:
                 _capture_photo()
