@@ -3,7 +3,7 @@ from signal import pause
 from gpiozero import Button
 
 from src.capture import run_capture
-from utils import shutdown_pi
+from src.utils import shutdown_pi
 
 BUTTON_GPIO = 26
 
