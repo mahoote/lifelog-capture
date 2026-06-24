@@ -36,7 +36,6 @@ def run_capture(
 
         while not stop_event.is_set():
             if not capture_mode_event.is_set():
-                print("Capture mode is disabled, waiting for next capture")
                 led_off()
                 stop_event.wait(timeout=0.25)
                 continue
@@ -83,7 +82,7 @@ def _capture_photo() -> None:
     footage_path = _camera.capture_jpeg()
     print(f"Captured photo: {footage_path}")
 
-    led_blink(0, 0.3)
+    led_blink(0, 1)
     led_on()
 
     # TODO: save footage_path to storage
