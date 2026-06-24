@@ -35,14 +35,16 @@ def run_capture(
         camera_started = True
 
         while not stop_event.is_set():
-            if not capture_mode_event.is_set():
-                led_off()
-                stop_event.wait(timeout=0.25)
-                continue
+            # TODO: Use when transfer mode is implemented
+            # if not capture_mode_event.is_set():
+            #     led_off()
+            #     stop_event.wait(timeout=0.25)
+            #     continue
 
             led_on()
 
-            if _motion.is_moving:
+            if not capture_mode_event.is_set():
+                # TODO: use _motion.is_moving when motion detection is implemented
                 _capture_video()
             else:
                 _capture_photo()
