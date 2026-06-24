@@ -13,21 +13,35 @@ _capture_interval = 10  # TODO: make this configurable
 _video_duration = 10
 
 
-def run_capture(stop_event: threading.Event, capture_mode_event: threading.Event) -> None:
+def run_capture(
+        stop_event: threading.Event,
+        capture_mode_event: threading.Event,
+) -> None:
     """
     Runs a loop to capture photos and videos.
     Will also detect motion and set the capture interval and mode based on it.
+
+    The thread remains alive until shutdown is requested.
+    When transfer mode is active, capturing is paused.
     """
+    print("Running capture loop")
+
     camera_started = False
     errored = False
 
-    print('Running capture loop')
     try:
         led_on()
         _camera.start_camera()
         camera_started = True
 
-        while not stop_event.is_set() and capture_mode_event.is_set():
+        while not stop_event.is_set():
+            if not capture_mode_event.is_set():
+                led_off()
+                stop_event.wait(timeout=0.25)
+                continue
+
+            led_on()
+
             if _motion.is_moving:
                 _capture_video()
             else:
@@ -40,19 +54,24 @@ def run_capture(stop_event: threading.Event, capture_mode_event: threading.Event
             )
 
             if not should_continue:
-                break
+                continue
 
     except Exception as e:
-        print(f"Error running capture logic: {e}")
         errored = True
+        print(f"Error running capture logic: {e}")
+
     finally:
-        print('Stopping capture loop')
+        print("Stopping capture loop")
         led_off()
+
         if camera_started:
             _camera.stop_camera()
 
     if errored and not stop_event.is_set():
-        led_blink_loop(stop_event=stop_event, period_s=0.5)
+        led_blink_loop(
+            stop_event=stop_event,
+            period_s=0.5,
+        )
 
 
 def _capture_photo() -> None:
