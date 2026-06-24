@@ -35,16 +35,16 @@ def _capture_photo() -> None:
     """
     Captures a photo and saves it to the storage.
     """
-    jpeg_bytes = _camera.capture_jpeg(_photo_quality)
-    # TODO: save jpeg_bytes to storage
+    footage_path = _camera.capture_jpeg(_photo_quality)
+    # TODO: save footage_path to storage
 
 
 def _capture_video() -> None:
     """
     Captures a video and saves it to the storage.
     """
-    video_bytes = _camera.capture_video(_video_duration)
-    # TODO: save video_bytes to storage
+    footage_path = _camera.capture_video(_video_duration)
+    # TODO: save footage_path to storage
 
 
 def _on_motion_detected() -> None:

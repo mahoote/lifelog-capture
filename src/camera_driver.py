@@ -1,16 +1,24 @@
+from __future__ import annotations
+
+from datetime import datetime
 from pathlib import Path
-from tempfile import NamedTemporaryFile
 from time import sleep
 
 from picamera2 import Picamera2
 from picamera2.encoders import H264Encoder
 
 
+def _timestamp_name() -> str:
+    # Example: 2026-06-24_12-47-19_123456
+    return datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
+
+
 class CameraDriver:
-    def __init__(self) -> None:
+    def __init__(self, footage_dir: str | Path = "footage") -> None:
         """
         Initialize the camera driver and create configurations for
         still image capture and video recording.
+        Also sets up the output directory for saved media.
 
         Creates:
             self.picam2: Picamera2 camera instance.
@@ -20,6 +28,9 @@ class CameraDriver:
         self.picam2: Picamera2 = Picamera2()
         self.photo_config: dict = self.picam2.create_still_configuration()
         self.video_config: dict = self.picam2.create_video_configuration()
+
+        self.footage_dir = Path(footage_dir)
+        self.footage_dir.mkdir(parents=True, exist_ok=True)
 
     def start_camera(self) -> None:
         """
@@ -34,9 +45,10 @@ class CameraDriver:
         self.picam2.configure(self.photo_config)
         self.picam2.start()
 
-    def capture_jpeg(self, quality: int) -> bytes:
+    def capture_jpeg(self, quality: int = 85) -> Path:
         """
-        Capture a JPEG image and return it as raw bytes.
+        Capture a JPEG image, save it under footage/<timestamp>.jpeg,
+        and return the saved file path.
 
         The camera switches to still mode, captures a JPEG image,
         temporarily stores it on disk, and then reads the file back
@@ -48,22 +60,22 @@ class CameraDriver:
                      produce larger files. Default is 85.
 
         Returns:
-            bytes: The complete JPEG image as a bytes object.
+            Path: The path to the saved JPEG image.
         """
-        temp_path = Path("/tmp/camera_capture.jpg")
+        out_path = self.footage_dir / f"{_timestamp_name()}.jpeg"
 
         self.picam2.switch_mode(self.photo_config)
         self.picam2.capture_file(
-            str(temp_path),
+            str(out_path),
             format="jpeg",
             quality=quality,
         )
+        return out_path
 
-        return temp_path.read_bytes()
-
-    def capture_video(self, seconds: int) -> bytes:
+    def capture_video(self, seconds: int) -> Path:
         """
-        Record a video clip and return it as raw H.264 bytes.
+        Record a video clip, save it under footage/<timestamp>.h264,
+        and return the saved file path.
 
         The camera switches to video mode, records for the specified
         duration, stores the recording in a temporary file, and then
@@ -73,25 +85,20 @@ class CameraDriver:
             seconds: Length of the recording in seconds.
 
         Returns:
-            bytes: The recorded video encoded in H.264 format.
+            Path: The path to the saved video file.
         """
-        with NamedTemporaryFile(suffix=".h264", delete=True) as temp_file:
-            encoder = H264Encoder()
+        out_path = self.footage_dir / f"{_timestamp_name()}.h264"
 
-            self.picam2.switch_mode(self.video_config)
-            self.picam2.start_recording(encoder, temp_file.name)
+        encoder = H264Encoder()
+        self.picam2.switch_mode(self.video_config)
+        self.picam2.start_recording(encoder, str(out_path))
+        sleep(seconds)
+        self.picam2.stop_recording()
 
-            sleep(seconds)
-
-            self.picam2.stop_recording()
-
-            return Path(temp_file.name).read_bytes()
+        return out_path
 
     def stop_camera(self) -> None:
         """
         Stop the camera and release camera resources.
-
-        Returns:
-            None
         """
         self.picam2.stop()
