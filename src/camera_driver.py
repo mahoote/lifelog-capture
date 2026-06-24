@@ -61,7 +61,7 @@ class CameraDriver:
 
         return temp_path.read_bytes()
 
-    def record_clip(self, seconds: int) -> bytes:
+    def capture_video(self, seconds: int) -> bytes:
         """
         Record a video clip and return it as raw H.264 bytes.
 
