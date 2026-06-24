@@ -2,6 +2,33 @@ import time
 import subprocess
 import threading
 from gpiozero import LED
+from time import monotonic
+
+
+def wait_for_next_capture(
+        stop_event: threading.Event,
+        capture_mode_event: threading.Event,
+        interval_seconds: float,
+        check_every: float = 0.25,
+) -> bool:
+    """
+    Wait until the next capture should happen.
+
+    Returns:
+        True if the full interval completed and capture mode is still active.
+        False if shutdown was requested or capture mode was disabled.
+    """
+    deadline = monotonic() + interval_seconds
+
+    while not stop_event.is_set() and capture_mode_event.is_set():
+        remaining = deadline - monotonic()
+
+        if remaining <= 0:
+            return True
+
+        stop_event.wait(timeout=min(check_every, remaining))
+
+    return False
 
 
 def blink_loop(led: LED, stop_event: threading.Event, period_s: float = 1.0):
