@@ -9,7 +9,7 @@ _motion = MotionDetector()
 _storage = None
 _clock = None
 
-_capture_interval = 60
+_capture_interval = 10  # TODO: make this configurable
 _video_duration = 10
 
 
