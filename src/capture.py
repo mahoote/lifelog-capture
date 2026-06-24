@@ -99,7 +99,7 @@ def _capture_video() -> None:
         kwargs={
             "stop_event": video_blink_stop_event,
             "on_period_s": 0.25,
-            "off_period_s": 0.1,
+            "off_period_s": 1,
         },
         daemon=True,
     )
