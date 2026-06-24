@@ -9,7 +9,6 @@ _clock = None
 _capture_interval = 60
 _video_duration = 10
 _photo_quality = 95
-_is_moving = False
 
 
 def run_capture() -> None:
