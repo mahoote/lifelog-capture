@@ -94,9 +94,14 @@ class CameraDriver:
 
         encoder = H264Encoder()
         self._switch_mode("video")
+
+        print("Recording video...")
+
         self.picam2.start_recording(encoder, str(out_path))
         sleep(seconds)
         self.picam2.stop_recording()
+
+        print("Video recording complete")
 
         return out_path
 
