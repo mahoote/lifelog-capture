@@ -1,6 +1,6 @@
 import threading
 from src.camera_driver import CameraDriver
-from src.led_utils import led_on, led_off, led_blink_loop
+from src.led_utils import led_on, led_off, led_blink_loop, led_blink
 from src.motion_detector import MotionDetector
 from src.utils import wait_for_next_capture
 
@@ -70,7 +70,8 @@ def run_capture(
     if errored and not stop_event.is_set():
         led_blink_loop(
             stop_event=stop_event,
-            period_s=0.5,
+            on_period_s=0.5,
+            off_period_s=0.5,
         )
 
 
@@ -79,6 +80,10 @@ def _capture_photo() -> None:
     Captures a photo and saves it to the storage.
     """
     footage_path = _camera.capture_jpeg()
+
+    led_blink(0, 0.2)
+    led_on()
+
     # TODO: save footage_path to storage
 
 
@@ -86,5 +91,25 @@ def _capture_video() -> None:
     """
     Captures a video and saves it to the storage.
     """
-    footage_path = _camera.capture_video(_video_duration)
-    # TODO: save footage_path to storage
+    video_blink_stop_event = threading.Event()
+
+    video_blink_thread = threading.Thread(
+        target=led_blink_loop,
+        kwargs={
+            "stop_event": video_blink_stop_event,
+            "on_period_s": 0.25,
+            "off_period_s": 0.75,
+        },
+        daemon=True,
+    )
+
+    video_blink_thread.start()
+
+    try:
+        footage_path = _camera.capture_video(_video_duration)
+        # TODO: save footage_path to storage
+
+    finally:
+        video_blink_stop_event.set()
+        video_blink_thread.join(timeout=1)
+        led_on()
