@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 from time import sleep
+from typing import Literal
 
 from picamera2 import Picamera2
 from picamera2.encoders import H264Encoder
@@ -36,6 +37,7 @@ class CameraDriver:
 
         self.footage_dir = Path(footage_dir)
         self.footage_dir.mkdir(parents=True, exist_ok=True)
+        self.current_mode: Literal["photo", "video"] | None = None
 
     def start_camera(self) -> None:
         """
@@ -49,6 +51,7 @@ class CameraDriver:
         """
         self.picam2.configure(self.photo_config)
         self.picam2.start()
+        self.current_mode = "photo"
         sleep(1)
 
     def capture_jpeg(self) -> Path:
@@ -65,7 +68,7 @@ class CameraDriver:
         """
         out_path = self.footage_dir / f"{_timestamp_name()}.jpeg"
 
-        self.picam2.switch_mode(self.photo_config)
+        self._switch_mode("photo")
         self.picam2.capture_file(
             str(out_path),
             format="jpeg",
@@ -90,7 +93,7 @@ class CameraDriver:
         out_path = self.footage_dir / f"{_timestamp_name()}.h264"
 
         encoder = H264Encoder()
-        self.picam2.switch_mode(self.video_config)
+        self._switch_mode("video")
         self.picam2.start_recording(encoder, str(out_path))
         sleep(seconds)
         self.picam2.stop_recording()
@@ -102,3 +105,17 @@ class CameraDriver:
         Stop the camera and release camera resources.
         """
         self.picam2.stop()
+
+    def _switch_mode(self, mode: Literal["photo", "video"]) -> None:
+        """
+        Switch camera mode only if the requested mode is not active.
+        """
+        if self.current_mode == mode:
+            return
+
+        if mode == "photo":
+            self.picam2.switch_mode(self.photo_config)
+        else:
+            self.picam2.switch_mode(self.video_config)
+
+        self.current_mode = mode
