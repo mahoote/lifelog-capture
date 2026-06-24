@@ -1,7 +1,8 @@
 from src.camera_driver import CameraDriver
+from src.motion_detector import MotionDetector
 
 _camera = CameraDriver()
-_motion = None
+_motion = MotionDetector()
 _storage = None
 _clock = None
 
@@ -20,7 +21,7 @@ def run_capture() -> None:
     try:
         _camera.start_camera()
 
-        if _is_moving:
+        if _motion.is_moving:
             _capture_video()
         else:
             _capture_photo()
@@ -45,10 +46,3 @@ def _capture_video() -> None:
     """
     footage_path = _camera.capture_video(_video_duration)
     # TODO: save footage_path to storage
-
-
-def _on_motion_detected() -> None:
-    """
-    Uses the gyroscope to determine the motion mode.
-    """
-    pass
