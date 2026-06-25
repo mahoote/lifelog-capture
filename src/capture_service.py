@@ -89,7 +89,7 @@ class CaptureService:
         """
         Captures a photo and saves it to the storage.
         """
-        footage_path = self._camera.capture_jpeg()
+        footage_path = self._camera.capture_jpeg(self.motion_detector.state)
         print(f"Captured photo: {footage_path}")
 
         led_blink(0, 0.2)
@@ -116,7 +116,7 @@ class CaptureService:
         video_blink_thread.start()
 
         try:
-            footage_path = self._camera.capture_video(VIDEO_DURATION_SECONDS)
+            footage_path = self._camera.capture_video(VIDEO_DURATION_SECONDS, self.motion_detector.state)
             # TODO: save footage_path to storage
 
         finally:

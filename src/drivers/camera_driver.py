@@ -8,6 +8,7 @@ from time import sleep
 from typing import Literal
 
 from src.config import PHOTO_SIZE, VIDEO_SIZE
+from src.motion_detector import MotionState
 
 
 def _timestamp_name() -> str:
@@ -55,7 +56,7 @@ class CameraDriver:
         self.current_mode = "photo"
         sleep(1)
 
-    def capture_jpeg(self) -> Path:
+    def capture_jpeg(self, state: MotionState) -> Path:
         """
         Capture a JPEG image, save it under footage/<timestamp>.jpeg,
         and return the saved file path.
@@ -64,10 +65,13 @@ class CameraDriver:
         temporarily stores it on disk, and then reads the file back
         into memory.
 
+        Args:
+            state: The motion state during which the photo is taken.
+
         Returns:
             Path: The path to the saved JPEG image.
         """
-        out_path = self.footage_dir / f"{_timestamp_name()}.jpeg"
+        out_path = self.footage_dir / f"{state}_{_timestamp_name()}.jpeg"
 
         self._switch_mode("photo")
         self.picam2.capture_file(
@@ -76,7 +80,7 @@ class CameraDriver:
         )
         return out_path
 
-    def capture_video(self, seconds: int) -> Path:
+    def capture_video(self, seconds: int, state: MotionState) -> Path:
         """
         Record a video clip, save it under footage/<timestamp>.h264,
         and return the saved file path.
@@ -87,11 +91,12 @@ class CameraDriver:
 
         Args:
             seconds: Length of the recording in seconds.
+            state: The motion state during which the video is recorded.
 
         Returns:
             Path: The path to the saved video file.
         """
-        out_path = self.footage_dir / f"{_timestamp_name()}.h264"
+        out_path = self.footage_dir / f"{state}_{_timestamp_name()}.h264"
 
         encoder = H264Encoder()
         self._switch_mode("video")
