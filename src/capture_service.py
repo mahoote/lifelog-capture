@@ -49,15 +49,12 @@ class CaptureService:
 
                 match self.motion_detector.state:
                     case MotionState.IDLE:
-                        print("IDLE")
                         self._capture_interval = IDLE_CAPTURE_INTERVAL_SECONDS
                         self._capture_photo()
                     case MotionState.ACTIVE:
-                        print("ACTIVE")
                         self._capture_interval = VIDEO_CAPTURE_INTERVAL_SECONDS
                         self._capture_video()
                     case _:
-                        print("DEFAULT")
                         self._capture_interval = DEFAULT_CAPTURE_INTERVAL_SECONDS
                         self._capture_photo()
 
