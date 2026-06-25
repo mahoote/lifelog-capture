@@ -2,7 +2,7 @@ import threading
 from collections.abc import Callable
 
 from src.services.motion_service import MotionService
-from src.utils import shutdown_pi
+from src.utils.utils import shutdown_pi
 
 
 def toggle_motion_mode(motion_detector: MotionService) -> None:

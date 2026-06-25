@@ -4,7 +4,7 @@ from src.drivers.camera_driver import CameraDriver
 from src.utils.led_utils import led_on, led_off, led_blink_loop, led_blink
 from src.services.log_service import LogService
 from src.services.motion_service import MotionService, MotionState
-from src.utils import wait_for_next_capture
+from src.utils.utils import wait_for_next_capture
 from src.config import (DEFAULT_CAPTURE_INTERVAL_SECONDS,
                         IDLE_CAPTURE_INTERVAL_SECONDS,
                         VIDEO_CAPTURE_INTERVAL_SECONDS,
