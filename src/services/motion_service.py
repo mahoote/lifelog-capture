@@ -125,6 +125,14 @@ class MotionService:
         elif self._idle_since is not None and now - self._idle_since >= self.idle_hold_s:
             self._set_state(MotionState.IDLE)
 
+        match self.state:
+            case MotionState.IDLE:
+                logger.debug("Motion is IDLE")
+            case MotionState.ACTIVE:
+                logger.debug("Motion is ACTIVE")
+            case MotionState.DEFAULT:
+                logger.debug("Motion is DEFAULT")
+
         return self.state
 
     def _set_state(self, new_state: MotionState, force: bool = False) -> None:
