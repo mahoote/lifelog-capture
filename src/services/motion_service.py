@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 from enum import Enum
 from time import sleep, time
+from typing import Callable
 
 from src.drivers.bmi160_driver import BMI160Driver, ImuSample
 
@@ -66,6 +67,19 @@ class MotionService:
         self._idle_since: float | None = None
         self._active_since: float | None = None
         self._last_state_change_at = 0.0
+        self._state_change_listener: Callable[[MotionState], None] | None = None
+
+    def set_state_change_listener(
+            self,
+            listener: Callable[[MotionState], None] | None,
+    ) -> None:
+        """
+        Register a callback that is called every time the motion state changes.
+
+        The LogService uses this to account for time in the previous state
+        immediately when the state changes, without writing to disk each time.
+        """
+        self._state_change_listener = listener
 
     def calibrate_idle(self, samples: int = 80) -> None:
         """
@@ -155,6 +169,9 @@ class MotionService:
             new_state.value,
             self.score,
         )
+
+        if self._state_change_listener is not None:
+            self._state_change_listener(new_state)
 
     def motion_score(self, sample: ImuSample) -> float:
         """
