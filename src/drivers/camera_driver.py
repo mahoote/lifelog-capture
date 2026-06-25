@@ -76,7 +76,7 @@ class CameraDriver:
         Returns:
             Path: The path to the saved JPEG image.
         """
-        out_path = self.footage_dir / f"{state}_{_timestamp_name()}.jpeg"
+        out_path = self.footage_dir / f"{state.name}_{_timestamp_name()}.jpeg"
 
         self._switch_mode("photo")
         self.picam2.capture_file(
@@ -101,7 +101,7 @@ class CameraDriver:
         Returns:
             Path: The path to the saved video file.
         """
-        out_path = self.footage_dir / f"{state}_{_timestamp_name()}.h264"
+        out_path = self.footage_dir / f"{state.name}_{_timestamp_name()}.h264"
 
         encoder = H264Encoder()
         self._switch_mode("video")
