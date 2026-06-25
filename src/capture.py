@@ -1,6 +1,6 @@
 import threading
 
-from src.camera_driver import CameraDriver
+from src.drivers.camera_driver import CameraDriver
 from src.led_utils import led_on, led_off, led_blink_loop, led_blink
 from src.motion_detector import MotionDetector
 from src.utils import wait_for_next_capture
