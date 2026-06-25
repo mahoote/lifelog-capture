@@ -12,8 +12,8 @@ from src.config import (DEFAULT_CAPTURE_INTERVAL_SECONDS,
 
 
 class CaptureService:
-    def __init__(self, motion_detector: MotionService, log_service: LogService):
-        self.motion_detector = motion_detector
+    def __init__(self, motion_service: MotionService, log_service: LogService):
+        self.motion_service = motion_service
         self.log_service = log_service
         self._camera = CameraDriver()
         self._storage = None
@@ -50,7 +50,7 @@ class CaptureService:
 
                 led_on()
 
-                match self.motion_detector.state:
+                match self.motion_service.state:
                     case MotionState.IDLE:
                         self._capture_interval = IDLE_CAPTURE_INTERVAL_SECONDS
                         self._capture_photo()
@@ -92,7 +92,7 @@ class CaptureService:
         """
         Captures a photo and saves it to the storage.
         """
-        footage_path = self._camera.capture_jpeg(self.motion_detector.state)
+        footage_path = self._camera.capture_jpeg(self.motion_service.state)
         print(f"Captured photo: {footage_path}")
 
         self.log_service.record_footage_taken()
@@ -121,7 +121,7 @@ class CaptureService:
         video_blink_thread.start()
 
         try:
-            footage_path = self._camera.capture_video(VIDEO_DURATION_SECONDS, self.motion_detector.state)
+            footage_path = self._camera.capture_video(VIDEO_DURATION_SECONDS, self.motion_service.state)
             print(f"Captured video: {footage_path}")
             self.log_service.record_footage_taken()
             # TODO: save footage_path to storage

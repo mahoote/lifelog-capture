@@ -5,16 +5,6 @@ from src.services.motion_service import MotionService
 from src.utils.utils import shutdown_pi
 
 
-def toggle_motion_mode(motion_detector: MotionService) -> None:
-    """Toggle between moving and stationary capture behavior."""
-    motion_detector.is_moving = not motion_detector.is_moving
-
-    if motion_detector.is_moving:
-        print("Motion mode enabled, capturing video")
-    else:
-        print("Motion mode disabled, capturing photos")
-
-
 def toggle_capture_mode(capture_mode_event: threading.Event) -> None:
     """Toggle between capture mode and transfer mode."""
     if capture_mode_event.is_set():

@@ -42,19 +42,19 @@ class LifelogApp:
         self.capture_mode_event.set()
 
         self.imu = BMI160Driver(address=config.bmi160_address)
-        self.motion_detector = MotionService(self.imu)
+        self.motion_service = MotionService(self.imu)
         self.motion_worker = MotionWorker(
             imu=self.imu,
-            detector=self.motion_detector,
+            detector=self.motion_service,
             stop_event=self.stop_event,
         )
 
         self.log_service = LogService(
-            motion_detector=self.motion_detector,
+            motion_service=self.motion_service,
             logs_dir=config.logs_dir,
         )
         self.capture_service = CaptureService(
-            motion_detector=self.motion_detector,
+            motion_service=self.motion_service,
             log_service=self.log_service,
         )
 
