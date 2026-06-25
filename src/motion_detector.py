@@ -12,10 +12,14 @@ States:
 
 from __future__ import annotations
 
+import logging
 from enum import Enum
 from time import sleep, time
 
 from src.drivers.bmi160_driver import BMI160Driver, ImuSample
+
+
+logger = logging.getLogger(__name__)
 
 
 class MotionState(str, Enum):
@@ -79,7 +83,7 @@ class MotionDetector:
         self.score = 0.0
         self._idle_since = None
         self._active_since = None
-        self.state = MotionState.IDLE
+        self._set_state(MotionState.IDLE)
 
     def update(self) -> MotionState:
         """
@@ -108,14 +112,29 @@ class MotionDetector:
         else:
             self._idle_since = None
             self._active_since = None
-            self.state = MotionState.DEFAULT
+            self._set_state(MotionState.DEFAULT)
 
         if self._active_since is not None and now - self._active_since >= self.active_hold_s:
-            self.state = MotionState.ACTIVE
+            self._set_state(MotionState.ACTIVE)
         elif self._idle_since is not None and now - self._idle_since >= self.idle_hold_s:
-            self.state = MotionState.IDLE
+            self._set_state(MotionState.IDLE)
 
         return self.state
+
+    def _set_state(self, new_state: MotionState) -> None:
+        """Update the motion state and log only when the mode changes."""
+        if new_state == self.state:
+            return
+
+        previous_state = self.state
+        self.state = new_state
+
+        logger.info(
+            "Motion mode changed: %s -> %s, score=%.2f",
+            previous_state.value,
+            new_state.value,
+            self.score,
+        )
 
     def motion_score(self, sample: ImuSample) -> float:
         """
