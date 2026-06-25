@@ -53,6 +53,10 @@ class LifelogApp:
             motion_service=self.motion_service,
             logs_dir=config.logs_dir,
         )
+        self.motion_service.set_state_change_listener(
+            self.log_service.record_motion_state_change
+        )
+        
         self.capture_service = CaptureService(
             motion_service=self.motion_service,
             log_service=self.log_service,
