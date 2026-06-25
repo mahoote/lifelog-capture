@@ -6,9 +6,9 @@ Sizes are written as (width, height) in pixels.
 """
 
 # Time between captures when capture mode is active.
-IDLE_CAPTURE_INTERVAL_SECONDS = 10  # 300 # User is not moving, so we can take photos less frequently.
-DEFAULT_CAPTURE_INTERVAL_SECONDS = 5  # 120 # User is moving, so we can take photos more frequently.
-VIDEO_CAPTURE_INTERVAL_SECONDS = 10  # 180 # User is moving a lot, so we can capture videos.
+IDLE_CAPTURE_INTERVAL_SECONDS = 300  # User is not moving, so we can take photos less frequently.
+DEFAULT_CAPTURE_INTERVAL_SECONDS = 120  # User is moving, so we can take photos more frequently.
+VIDEO_CAPTURE_INTERVAL_SECONDS = 180  # User is moving a lot, so we can capture videos.
 
 # Length of each video clip when motion is detected.
 VIDEO_DURATION_SECONDS = 10
