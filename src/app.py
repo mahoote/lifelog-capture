@@ -96,7 +96,7 @@ class LifelogApp:
     def _bind_button_handlers(self) -> None:
         handle_long_press, handle_button_release = create_button_handlers(
             self.stop_event,
-            self.motion_detector,
+            self.capture_mode_event,
             self.capture_thread,
         )
 

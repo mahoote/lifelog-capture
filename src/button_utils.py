@@ -27,8 +27,8 @@ def toggle_capture_mode(capture_mode_event: threading.Event) -> None:
 
 def create_button_handlers(
         stop_event: threading.Event,
-        # capture_mode_event: threading.Event,
-        motion: MotionDetector,
+        capture_mode_event: threading.Event,
+        # motion: MotionDetector,
         capture_thread: threading.Thread,
 ) -> tuple[Callable[[], None], Callable[[], None]]:
     """
@@ -54,7 +54,7 @@ def create_button_handlers(
             return
 
         print("Short press detected")
-        # toggle_capture_mode(capture_mode_event)
-        toggle_motion_mode(motion)
+        toggle_capture_mode(capture_mode_event)
+        # toggle_motion_mode(motion)
 
     return handle_long_press, handle_button_release

@@ -2,7 +2,7 @@ import threading
 
 from src.drivers.camera_driver import CameraDriver
 from src.led_utils import led_on, led_off, led_blink_loop, led_blink
-from src.motion_detector import MotionDetector
+from src.motion_detector import MotionDetector, MotionState
 from src.utils import wait_for_next_capture
 from src.config import (DEFAULT_CAPTURE_INTERVAL_SECONDS,
                         IDLE_CAPTURE_INTERVAL_SECONDS,
@@ -48,10 +48,10 @@ class CaptureService:
                 led_on()
 
                 match self.motion_detector.state:
-                    case "IDLE":
+                    case MotionState.IDLE:
                         self._capture_interval = IDLE_CAPTURE_INTERVAL_SECONDS
                         self._capture_photo()
-                    case "ACTIVE":
+                    case MotionState.ACTIVE:
                         self._capture_interval = VIDEO_CAPTURE_INTERVAL_SECONDS
                         self._capture_video()
                     case _:

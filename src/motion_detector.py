@@ -115,6 +115,14 @@ class MotionDetector:
         elif self._idle_since is not None and now - self._idle_since >= self.idle_hold_s:
             self.state = MotionState.IDLE
 
+        match self.state:
+            case MotionState.IDLE:
+                print("Motion State: IDLE")
+            case MotionState.DEFAULT:
+                print("Motion State: DEFAULT")
+            case MotionState.ACTIVE:
+                print("Motion State: ACTIVE")
+
         return self.state
 
     def motion_score(self, sample: ImuSample) -> float:
