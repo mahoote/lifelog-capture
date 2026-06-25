@@ -8,7 +8,7 @@ from time import sleep
 from typing import Literal
 
 from src.config import PHOTO_SIZE, VIDEO_SIZE
-from src.motion_detector import MotionState
+from src.services.motion_service import MotionState
 
 
 def _timestamp_name() -> str:

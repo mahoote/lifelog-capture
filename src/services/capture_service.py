@@ -1,8 +1,9 @@
 import threading
 
 from src.drivers.camera_driver import CameraDriver
-from src.led_utils import led_on, led_off, led_blink_loop, led_blink
-from src.motion_detector import MotionDetector, MotionState
+from src.utils.led_utils import led_on, led_off, led_blink_loop, led_blink
+from src.services.log_service import LogService
+from src.services.motion_service import MotionService, MotionState
 from src.utils import wait_for_next_capture
 from src.config import (DEFAULT_CAPTURE_INTERVAL_SECONDS,
                         IDLE_CAPTURE_INTERVAL_SECONDS,
@@ -11,8 +12,9 @@ from src.config import (DEFAULT_CAPTURE_INTERVAL_SECONDS,
 
 
 class CaptureService:
-    def __init__(self, motion_detector: MotionDetector):
+    def __init__(self, motion_detector: MotionService, log_service: LogService):
         self.motion_detector = motion_detector
+        self.log_service = log_service
         self._camera = CameraDriver()
         self._storage = None
         self._capture_interval = DEFAULT_CAPTURE_INTERVAL_SECONDS
@@ -41,6 +43,7 @@ class CaptureService:
 
             while not stop_event.is_set():
                 if not capture_mode_event.is_set():
+                    self.log_service.pause_capture_mode()
                     led_off()
                     stop_event.wait(timeout=0.25)
                     continue
@@ -92,6 +95,8 @@ class CaptureService:
         footage_path = self._camera.capture_jpeg(self.motion_detector.state)
         print(f"Captured photo: {footage_path}")
 
+        self.log_service.record_footage_taken()
+
         led_blink(0, 0.2)
         led_on()
 
@@ -117,6 +122,8 @@ class CaptureService:
 
         try:
             footage_path = self._camera.capture_video(VIDEO_DURATION_SECONDS, self.motion_detector.state)
+            print(f"Captured video: {footage_path}")
+            self.log_service.record_footage_taken()
             # TODO: save footage_path to storage
 
         finally:

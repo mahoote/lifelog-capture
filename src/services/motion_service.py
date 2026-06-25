@@ -18,7 +18,6 @@ from time import sleep, time
 
 from src.drivers.bmi160_driver import BMI160Driver, ImuSample
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -28,7 +27,7 @@ class MotionState(str, Enum):
     ACTIVE = "active"
 
 
-class MotionDetector:
+class MotionService:
     def __init__(
             self,
             imu: BMI160Driver,

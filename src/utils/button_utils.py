@@ -1,11 +1,11 @@
 import threading
 from collections.abc import Callable
 
-from src.motion_detector import MotionDetector
+from src.services.motion_service import MotionService
 from src.utils import shutdown_pi
 
 
-def toggle_motion_mode(motion_detector: MotionDetector) -> None:
+def toggle_motion_mode(motion_detector: MotionService) -> None:
     """Toggle between moving and stationary capture behavior."""
     motion_detector.is_moving = not motion_detector.is_moving
 

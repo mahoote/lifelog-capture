@@ -16,10 +16,11 @@ from dataclasses import dataclass
 from signal import pause
 from gpiozero import Button
 
-from src.button_utils import create_button_handlers
-from src.capture_service import CaptureService
+from src.utils.button_utils import create_button_handlers
+from src.services.capture_service import CaptureService
 from src.drivers.bmi160_driver import BMI160Driver
-from src.motion_detector import MotionDetector
+from src.services.log_service import LogService
+from src.services.motion_service import MotionService
 from src.workers.motion_worker import MotionWorker
 
 
@@ -29,6 +30,7 @@ class AppConfig:
     bmi160_address: int = 0x69
     button_bounce_time_s: float = 0.05
     button_hold_time_s: float = 3.0
+    logs_dir: str = "logs"
 
 
 class LifelogApp:
@@ -40,14 +42,21 @@ class LifelogApp:
         self.capture_mode_event.set()
 
         self.imu = BMI160Driver(address=config.bmi160_address)
-        self.motion_detector = MotionDetector(self.imu)
+        self.motion_detector = MotionService(self.imu)
         self.motion_worker = MotionWorker(
             imu=self.imu,
             detector=self.motion_detector,
             stop_event=self.stop_event,
         )
 
-        self.capture_service = CaptureService(self.motion_detector)
+        self.log_service = LogService(
+            motion_detector=self.motion_detector,
+            logs_dir=config.logs_dir,
+        )
+        self.capture_service = CaptureService(
+            motion_detector=self.motion_detector,
+            log_service=self.log_service,
+        )
 
         self.button = self._create_button()
         self.motion_thread = self._create_motion_thread()
