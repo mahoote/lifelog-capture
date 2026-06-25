@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from libcamera import Transform
 from picamera2 import Picamera2
 from picamera2.encoders import H264Encoder
 from datetime import datetime
@@ -29,12 +30,16 @@ class CameraDriver:
             self.video_config: Configuration used for video recording.
         """
         self.picam2: Picamera2 = Picamera2()
+        self.camera_transform = Transform(hflip=1, vflip=1)
+
         self.photo_config: dict = self.picam2.create_still_configuration(
-            main={"size": PHOTO_SIZE}
+            main={"size": PHOTO_SIZE},
+            transform=self.camera_transform,
         )
 
         self.video_config: dict = self.picam2.create_video_configuration(
-            main={"size": VIDEO_SIZE}
+            main={"size": VIDEO_SIZE},
+            transform=self.camera_transform,
         )
 
         self.footage_dir = Path(footage_dir)
