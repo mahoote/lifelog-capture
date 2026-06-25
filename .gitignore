@@ -1,2 +1,4 @@
 /.venv
 /.idea
+/footage
+/src/__pycache__
