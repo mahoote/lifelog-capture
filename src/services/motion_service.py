@@ -118,12 +118,12 @@ class MotionService:
         else:
             self._idle_since = None
             self._active_since = None
-            self._set_state(MotionState.DEFAULT)
+            self._set_state(MotionState.DEFAULT, force=True)
 
         if self._active_since is not None and now - self._active_since >= self.active_hold_s:
-            self._set_state(MotionState.ACTIVE)
+            self._set_state(MotionState.ACTIVE, force=True)
         elif self._idle_since is not None and now - self._idle_since >= self.idle_hold_s:
-            self._set_state(MotionState.IDLE)
+            self._set_state(MotionState.IDLE, force=True)
 
         match self.state:
             case MotionState.IDLE:
