@@ -109,14 +109,11 @@ class MotionDetector:
             self._idle_since = None
             self._active_since = None
             self.state = MotionState.DEFAULT
-            print("Motion State: DEFAULT")
 
         if self._active_since is not None and now - self._active_since >= self.active_hold_s:
             self.state = MotionState.ACTIVE
-            print("Motion State: ACTIVE")
         elif self._idle_since is not None and now - self._idle_since >= self.idle_hold_s:
             self.state = MotionState.IDLE
-            print("Motion State: IDLE")
 
         return self.state
 
