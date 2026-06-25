@@ -127,11 +127,11 @@ class MotionService:
 
         match self.state:
             case MotionState.IDLE:
-                logger.debug("Motion is IDLE")
+                print("Motion is IDLE")
             case MotionState.ACTIVE:
-                logger.debug("Motion is ACTIVE")
+                print("Motion is ACTIVE")
             case MotionState.DEFAULT:
-                logger.debug("Motion is DEFAULT")
+                print("Motion is DEFAULT")
 
         return self.state
 
