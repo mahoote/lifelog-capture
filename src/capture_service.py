@@ -50,11 +50,13 @@ class CaptureService:
                 match self.motion_detector.state:
                     case "IDLE":
                         self._capture_interval = IDLE_CAPTURE_INTERVAL_SECONDS
+                        self._capture_photo()
                     case "ACTIVE":
                         self._capture_interval = VIDEO_CAPTURE_INTERVAL_SECONDS
                         self._capture_video()
                     case _:
                         self._capture_interval = DEFAULT_CAPTURE_INTERVAL_SECONDS
+                        self._capture_photo()
 
                 should_continue = wait_for_next_capture(
                     stop_event=stop_event,
