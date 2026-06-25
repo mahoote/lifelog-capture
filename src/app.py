@@ -17,7 +17,7 @@ from signal import pause
 from gpiozero import Button
 
 from src.button_utils import create_button_handlers
-from src.capture import run_capture
+from src.capture_service import CaptureService
 from src.drivers.bmi160_driver import BMI160Driver
 from src.motion_detector import MotionDetector
 from src.workers.motion_worker import MotionWorker
@@ -46,6 +46,8 @@ class LifelogApp:
             detector=self.motion_detector,
             stop_event=self.stop_event,
         )
+
+        self.capture_service = CaptureService(self.motion_detector)
 
         self.button = self._create_button()
         self.motion_thread = self._create_motion_thread()
@@ -85,7 +87,7 @@ class LifelogApp:
 
     def _create_capture_thread(self) -> threading.Thread:
         return threading.Thread(
-            target=run_capture,
+            target=self.capture_service.run_capture,
             args=(self.stop_event, self.capture_mode_event),
             name="capture",
             daemon=True,
