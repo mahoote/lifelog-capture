@@ -1,6 +1,5 @@
 import threading
 from signal import pause
-
 from gpiozero import Button
 
 from src.button_utils import create_button_handlers

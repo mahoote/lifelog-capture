@@ -1,16 +1,17 @@
 import threading
+
 from src.camera_driver import CameraDriver
 from src.led_utils import led_on, led_off, led_blink_loop, led_blink
 from src.motion_detector import MotionDetector
 from src.utils import wait_for_next_capture
+from src.config import DEFAULT_CAPTURE_INTERVAL_SECONDS, VIDEO_DURATION_SECONDS
 
 motion = MotionDetector()
 _camera = CameraDriver()
 _storage = None
 _clock = None
 
-_capture_interval = 10  # TODO: make this configurable
-_video_duration = 10
+_capture_interval = DEFAULT_CAPTURE_INTERVAL_SECONDS
 
 
 def run_capture(
@@ -107,7 +108,7 @@ def _capture_video() -> None:
     video_blink_thread.start()
 
     try:
-        footage_path = _camera.capture_video(_video_duration)
+        footage_path = _camera.capture_video(VIDEO_DURATION_SECONDS)
         # TODO: save footage_path to storage
 
     finally:

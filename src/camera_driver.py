@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from picamera2 import Picamera2
+from picamera2.encoders import H264Encoder
 from datetime import datetime
 from pathlib import Path
 from time import sleep
 from typing import Literal
 
-from picamera2 import Picamera2
-from picamera2.encoders import H264Encoder
+from src.config import PHOTO_SIZE, VIDEO_SIZE
 
 
 def _timestamp_name() -> str:
@@ -28,11 +29,11 @@ class CameraDriver:
         """
         self.picam2: Picamera2 = Picamera2()
         self.photo_config: dict = self.picam2.create_still_configuration(
-            main={"size": (1920, 1080)}
+            main={"size": PHOTO_SIZE}
         )
 
         self.video_config: dict = self.picam2.create_video_configuration(
-            main={"size": (1280, 720)}
+            main={"size": VIDEO_SIZE}
         )
 
         self.footage_dir = Path(footage_dir)
