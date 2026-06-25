@@ -36,7 +36,7 @@ class MotionService:
             idle_score: float = 0.10,
             active_hold_s: float = 0.6,
             idle_hold_s: float = 2.0,
-            state_cooldown_s: float = 10.0,
+            state_cooldown_s: float = 5.0,
     ):
         """
         Creates the motion classification logic.
@@ -118,12 +118,12 @@ class MotionService:
         else:
             self._idle_since = None
             self._active_since = None
-            self._set_state(MotionState.DEFAULT, force=True)
+            self._set_state(MotionState.DEFAULT)
 
         if self._active_since is not None and now - self._active_since >= self.active_hold_s:
-            self._set_state(MotionState.ACTIVE, force=True)
+            self._set_state(MotionState.ACTIVE)
         elif self._idle_since is not None and now - self._idle_since >= self.idle_hold_s:
-            self._set_state(MotionState.IDLE, force=True)
+            self._set_state(MotionState.IDLE)
 
         match self.state:
             case MotionState.IDLE:
