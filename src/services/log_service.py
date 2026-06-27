@@ -11,7 +11,8 @@ from __future__ import annotations
 from datetime import datetime, time as datetime_time, timedelta
 from pathlib import Path
 
-from src.services.motion_service import MotionState, MotionService
+from src.services.motion_service import MotionService
+from src.types.motion_state import MotionState
 
 
 class LogService:

@@ -4,6 +4,8 @@ from enum import StrEnum
 from pathlib import Path
 from uuid import UUID
 
+from src.types.motion_state import MotionState
+
 
 class FootageType(StrEnum):
     """Supported types of captured footage."""
@@ -47,7 +49,8 @@ class FootageItem:
     created_at: datetime
     file_path: Path
     size_bytes: int
-    state: FootageState = FootageState.PENDING
+    state: FootageState = FootageState.PENDING,
+    motion_state: MotionState
     attempt: int = 0
     sha256: str | None = None
     last_attempt_at: datetime | None = None
@@ -65,3 +68,4 @@ class FootageItemInsert:
     sha256: str
     duration_s: int | None
     capture_end_at: datetime | None
+    motion_state: MotionState

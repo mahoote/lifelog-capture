@@ -65,8 +65,8 @@ def add_item(item: FootageItemInsert) -> None:
         cursor.execute(
             """
             INSERT INTO upload_queue (
-                type, file_path, size_bytes, sha256, duration_s, capture_end_at
-            ) VALUES (?, ?, ?, ?, ?, ?)
+                type, file_path, size_bytes, sha256, duration_s, capture_end_at, motion_state
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 item.type,
@@ -75,6 +75,7 @@ def add_item(item: FootageItemInsert) -> None:
                 item.sha256,
                 item.duration_s,
                 item.capture_end_at,
+                item.motion_state
             )
         )
 

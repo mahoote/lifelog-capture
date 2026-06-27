@@ -13,19 +13,13 @@ States:
 from __future__ import annotations
 
 import logging
-from enum import Enum
 from time import sleep, time
 from typing import Callable
 
 from src.drivers.bmi160_driver import BMI160Driver, ImuSample
+from src.types.motion_state import MotionState
 
 logger = logging.getLogger(__name__)
-
-
-class MotionState(str, Enum):
-    IDLE = "idle"
-    DEFAULT = "default"
-    ACTIVE = "active"
 
 
 class MotionService:

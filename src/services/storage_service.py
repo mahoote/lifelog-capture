@@ -3,10 +3,12 @@ from pathlib import Path
 
 from src.database import add_item
 from src.types.footage_item import FootageType, FootageItemInsert
+from src.types.motion_state import MotionState
 from src.utils.math_utils import calculate_sha256
 
 
-def write_item(file_path: Path, size_bytes: int, footage_type: FootageType, duration_s: int | None,
+def write_item(file_path: Path, size_bytes: int, footage_type: FootageType, motion_state: MotionState,
+               duration_s: int | None,
                capture_end_at: datetime | None) -> None:
     """
     Writes a new footage item to the database.
@@ -20,7 +22,8 @@ def write_item(file_path: Path, size_bytes: int, footage_type: FootageType, dura
         size_bytes=size_bytes,
         sha256=sha256,
         duration_s=duration_s,
-        capture_end_at=capture_end_at
+        capture_end_at=capture_end_at,
+        motion_state=motion_state
     )
 
     add_item(new_footage_item)
