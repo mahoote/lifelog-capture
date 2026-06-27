@@ -32,7 +32,7 @@ def init_database() -> None:
 
         cursor.execute(
             """
-            CREATE TABLE IF NOT EXISTS upload_queue (
+            CREATE TABLE IF NOT EXISTS footage_item (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 type TEXT NOT NULL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -64,7 +64,7 @@ def add_item(item: FootageItemInsert) -> None:
 
         cursor.execute(
             """
-            INSERT INTO upload_queue (
+            INSERT INTO footage_item (
                 type, file_path, size_bytes, sha256, duration_s, capture_end_at, motion_state
             ) VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
@@ -94,7 +94,7 @@ def set_state(item_id: int, new_state: FootageState) -> None:
 
         cursor.execute(
             """
-            UPDATE upload_queue
+            UPDATE footage_item
             SET state = ?
             WHERE id = ?
             """,
@@ -115,7 +115,7 @@ def get_pending_items() -> list[FootageItem]:
 
         cursor.execute(
             """
-            SELECT * FROM upload_queue
+            SELECT * FROM footage_item
             WHERE state = 'pending'
             ORDER BY created_at ASC
             """
