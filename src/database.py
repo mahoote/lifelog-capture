@@ -70,7 +70,7 @@ def add_item(item: FootageItemInsert) -> None:
             """,
             (
                 item.type,
-                item.file_path,
+                str(item.file_path),
                 item.size_bytes,
                 item.sha256,
                 item.duration_s,
