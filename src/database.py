@@ -39,6 +39,7 @@ def init_database() -> None:
                 file_path TEXT NOT NULL,
                 size_bytes INTEGER NOT NULL,
                 state TEXT NOT NULL DEFAULT 'pending',
+                motion_state TEXT NOT NULL,
                 attempts INTEGER NOT NULL DEFAULT 0,
                 sha256 TEXT,
                 last_attempt_at TEXT,
