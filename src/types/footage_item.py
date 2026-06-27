@@ -42,7 +42,7 @@ class FootageItem:
         acked_at: Time when the server acknowledged receipt.
     """
 
-    id: UUID
+    id: UUID | None
     type: FootageType
     created_at: datetime
     file_path: Path
@@ -55,3 +55,13 @@ class FootageItem:
     duration_s: int | None = None
     capture_end_at: datetime | None = None
     acked_at: datetime | None = None
+
+
+@dataclass
+class FootageItemInsert:
+    type: FootageType
+    file_path: Path
+    size_bytes: int
+    sha256: str
+    duration_s: int | None
+    capture_end_at: datetime | None

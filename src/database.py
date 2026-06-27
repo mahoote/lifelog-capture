@@ -1,7 +1,7 @@
 import sqlite3
 
 from src.config import DATA_DIR, DATABASE_PATH
-from src.types.footage_item import FootageItem, FootageState
+from src.types.footage_item import FootageItem, FootageState, FootageItemInsert
 
 
 def get_connection() -> sqlite3.Connection:
@@ -52,12 +52,12 @@ def init_database() -> None:
 
         connection.commit()
 
-def add_item(item: FootageItem) -> None:
+def add_item(item: FootageItemInsert) -> None:
     """
     Add a new FootageItem to the upload queue.
 
     Args:
-        item (FootageItem): The footage item to add.
+        item (FootageItemInsert): The footage item to add.
     """
     with get_connection() as connection:
         cursor = connection.cursor()
@@ -65,24 +65,16 @@ def add_item(item: FootageItem) -> None:
         cursor.execute(
             """
             INSERT INTO upload_queue (
-                type, created_at, file_path, size_bytes, state,
-                attempts, sha256, last_attempt_at, last_error,
-                duration_s, capture_end_at, acked_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                type, file_path, size_bytes, sha256, duration_s, capture_end_at
+            ) VALUES (?, ?, ?, ?, ?, ?)
             """,
             (
                 item.type,
-                item.created_at,
                 item.file_path,
                 item.size_bytes,
-                item.state,
-                item.attempt,
                 item.sha256,
-                item.last_attempt_at,
-                item.last_error,
                 item.duration_s,
                 item.capture_end_at,
-                item.acked_at
             )
         )
 
