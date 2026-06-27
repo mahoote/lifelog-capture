@@ -21,7 +21,7 @@ class FootageState(StrEnum):
     FAILED = "failed"
 
 
-@dataclass(frozen=True)
+@dataclass
 class FootageItem:
     """
     Represents a single captured photo or video.
