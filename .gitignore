@@ -1,6 +1,7 @@
 /.venv
 /.idea
+__pycache__
+
 /footage
 /logs
 /data
-__pycache__
