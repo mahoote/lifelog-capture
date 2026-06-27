@@ -7,9 +7,9 @@ from src.types.motion_state import MotionState
 from src.utils.math_utils import calculate_sha256
 
 
-def write_item(file_path: Path, size_bytes: int, footage_type: FootageType, motion_state: MotionState,
-               duration_s: int | None,
-               capture_end_at: datetime | None) -> None:
+def storage_write_item(file_path: Path, size_bytes: int, footage_type: FootageType, motion_state: MotionState,
+                       duration_s: int | None,
+                       capture_end_at: datetime | None) -> None:
     """
     Writes a new footage item to the database.
     Only includes the minimum required fields.
