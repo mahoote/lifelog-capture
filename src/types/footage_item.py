@@ -34,6 +34,7 @@ class FootageItem:
         created_at: Timestamp when the capture was created.
         file_path: Location of the file on disk.
         size_bytes: Size of the file in bytes.
+        motion_state: Current motion detection state.
         state: Current upload state.
         attempt: Number of upload attempts made.
         sha256: Optional SHA-256 checksum of the file.
