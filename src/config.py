@@ -1,9 +1,15 @@
+from pathlib import Path
+
 """
 Project configuration.
 
 Edit these values to change the capture timing and camera resolutions.
 Sizes are written as (width, height) in pixels.
 """
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = BASE_DIR / "data"
+DATABASE_PATH = DATA_DIR / "lifelog.db"
 
 # Time between captures when capture mode is active.
 IDLE_CAPTURE_INTERVAL_SECONDS = 300  # User is not moving, so we can take photos less frequently.
