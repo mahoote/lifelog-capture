@@ -49,8 +49,8 @@ class FootageItem:
     created_at: datetime
     file_path: Path
     size_bytes: int
-    state: FootageState = FootageState.PENDING,
     motion_state: MotionState
+    state: FootageState = FootageState.PENDING
     attempt: int = 0
     sha256: str | None = None
     last_attempt_at: datetime | None = None
