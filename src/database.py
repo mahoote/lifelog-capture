@@ -1,6 +1,7 @@
 import sqlite3
 
 from src.config import DATA_DIR, DATABASE_PATH
+from src.types.footage_item import FootageItem, FootageState
 
 
 def get_connection() -> sqlite3.Connection:
@@ -50,3 +51,82 @@ def init_database() -> None:
         )
 
         connection.commit()
+
+def add_item(item: FootageItem) -> None:
+    """
+    Add a new FootageItem to the upload queue.
+
+    Args:
+        item (FootageItem): The footage item to add.
+    """
+    with get_connection() as connection:
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            INSERT INTO upload_queue (
+                type, created_at, file_path, size_bytes, state,
+                attempts, sha256, last_attempt_at, last_error,
+                duration_s, capture_end_at, acked_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                item.type,
+                item.created_at,
+                item.file_path,
+                item.size_bytes,
+                item.state,
+                item.attempt,
+                item.sha256,
+                item.last_attempt_at,
+                item.last_error,
+                item.duration_s,
+                item.capture_end_at,
+                item.acked_at
+            )
+        )
+
+        connection.commit()
+
+def set_state(item_id: int, new_state: FootageState) -> None:
+    """
+    Update the state of a FootageItem in the upload queue.
+
+    Args:
+        item_id (int): The ID of the footage item to update.
+        new_state (FootageState): The new state to set.
+    """
+    with get_connection() as connection:
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            UPDATE upload_queue
+            SET state = ?
+            WHERE id = ?
+            """,
+            (new_state, item_id)
+        )
+
+        connection.commit()
+
+def get_pending_items() -> list[FootageItem]:
+    """
+    Retrieve all FootageItems in the upload queue that are in the 'pending' state.
+
+    Returns:
+        list[FootageItem]: A list of pending footage items.
+    """
+    with get_connection() as connection:
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            SELECT * FROM upload_queue
+            WHERE state = 'pending'
+            ORDER BY created_at ASC
+            """
+        )
+
+        rows = cursor.fetchall()
+        return [FootageItem(**row) for row in rows]
