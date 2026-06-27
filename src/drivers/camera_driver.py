@@ -3,7 +3,7 @@ from __future__ import annotations
 from libcamera import Transform
 from picamera2 import Picamera2
 from picamera2.encoders import H264Encoder
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from time import sleep
 from typing import Literal
@@ -85,36 +85,42 @@ class CameraDriver:
         )
         return out_path
 
-    def capture_video(self, seconds: int, state: MotionState) -> Path:
+    from datetime import datetime, timezone
+    from pathlib import Path
+
+    def capture_video(
+            self,
+            seconds: int,
+            state: MotionState,
+    ) -> tuple[Path, datetime]:
         """
         Record a video clip, save it under footage/<timestamp>.h264,
-        and return the saved file path.
+        and return the saved file path along with the time recording ended.
 
         The camera switches to video mode, records for the specified
-        duration, stores the recording in a temporary file, and then
-        loads the file into memory.
+        duration, and stores the recording on disk.
 
         Args:
             seconds: Length of the recording in seconds.
             state: The motion state during which the video is recorded.
 
         Returns:
-            Path: The path to the saved video file.
+            tuple[Path, datetime]:
+                - Path to the saved video file.
+                - UTC timestamp when recording finished.
         """
         out_path = self.footage_dir / f"{state.name}_{_timestamp_name()}.h264"
 
         encoder = H264Encoder()
         self._switch_mode("video")
 
-        print("Recording video...")
-
         self.picam2.start_recording(encoder, str(out_path))
         sleep(seconds)
         self.picam2.stop_recording()
 
-        print("Video recording complete")
+        capture_end_at = datetime.now(timezone.utc)
 
-        return out_path
+        return out_path, capture_end_at
 
     def stop_camera(self) -> None:
         """
