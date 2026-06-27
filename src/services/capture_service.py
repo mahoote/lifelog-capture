@@ -1,9 +1,13 @@
+import logging
 import threading
 
 from src.drivers.camera_driver import CameraDriver
+from src.services.storage_service import storage_write_item
+from src.types.footage_item import FootageType
 from src.utils.led_utils import led_on, led_off, led_blink_loop, led_blink
 from src.services.log_service import LogService
-from src.services.motion_service import MotionService, MotionState
+from src.services.motion_service import MotionService
+from src.types.motion_state import MotionState
 from src.utils.utils import wait_for_next_capture
 from src.config import (DEFAULT_CAPTURE_INTERVAL_SECONDS,
                         IDLE_CAPTURE_INTERVAL_SECONDS,
@@ -92,15 +96,22 @@ class CaptureService:
         """
         Captures a photo and saves it to the storage.
         """
-        footage_path = self._camera.capture_jpeg(self.motion_service.state)
-        print(f"Captured photo: {footage_path}")
+        footage_path = self._camera.capture_jpeg()
+        logging.info(f"Captured photo: {footage_path}")
 
         self.log_service.record_footage_taken()
 
+        storage_write_item(
+            file_path=footage_path,
+            size_bytes=footage_path.stat().st_size,
+            footage_type=FootageType.PHOTO,
+            motion_state=self.motion_service.state,
+            duration_s=None,
+            capture_end_at=None
+        )
+
         led_blink(0, 0.2)
         led_on()
-
-        # TODO: save footage_path to storage
 
     def _capture_video(self) -> None:
         """
@@ -121,10 +132,19 @@ class CaptureService:
         video_blink_thread.start()
 
         try:
-            footage_path = self._camera.capture_video(VIDEO_DURATION_SECONDS, self.motion_service.state)
-            print(f"Captured video: {footage_path}")
+            footage_path, capture_end_at = self._camera.capture_video(VIDEO_DURATION_SECONDS)
+            logging.info(f"Captured video: {footage_path}")
             self.log_service.record_footage_taken()
-            # TODO: save footage_path to storage
+
+            storage_write_item(
+                file_path=footage_path,
+                size_bytes=footage_path.stat().st_size,
+                footage_type=FootageType.VIDEO,
+                motion_state=self.motion_service.state,
+                duration_s=VIDEO_DURATION_SECONDS,
+                capture_end_at=capture_end_at
+            )
+
 
         finally:
             video_blink_stop_event.set()

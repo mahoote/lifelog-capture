@@ -1,6 +1,7 @@
 import logging
 
 from src.app import AppConfig, LifelogApp
+from src.database import init_database
 
 
 def configure_logging() -> None:
@@ -12,6 +13,7 @@ def configure_logging() -> None:
 
 def main() -> None:
     configure_logging()
+    init_database()
 
     app = LifelogApp(AppConfig())
 
