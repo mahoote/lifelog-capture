@@ -10,6 +10,19 @@ Sizes are written as (width, height) in pixels.
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 DATABASE_PATH = DATA_DIR / "lifelog.db"
+FOOTAGE_DIR = DATA_DIR / "footage"
+
+HTTP_HOST = "0.0.0.0"
+HTTP_PORT = 8000
+
+BLE_DEVICE_NAME = "Lifelog Glasses"
+
+BLE_SERVICE_UUID = "8f18b6c0-6d9f-4f3c-9fd5-111111111111"
+BLE_WIFI_SCAN_UUID = "8f18b6c0-6d9f-4f3c-9fd5-222222222222"
+BLE_WIFI_CREDENTIALS_UUID = "8f18b6c0-6d9f-4f3c-9fd5-333333333333"
+BLE_WIFI_STATUS_UUID = "8f18b6c0-6d9f-4f3c-9fd5-444444444444"
+BLE_TRANSFER_STATUS_UUID = "8f18b6c0-6d9f-4f3c-9fd5-555555555555"
+BLE_TRANSFER_COMMAND_UUID = "8f18b6c0-6d9f-4f3c-9fd5-666666666666"
 
 # Time between captures when capture mode is active.
 IDLE_CAPTURE_INTERVAL_SECONDS = 300  # User is not moving, so we can take photos less frequently.
