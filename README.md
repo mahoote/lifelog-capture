@@ -16,6 +16,8 @@ The project is built around a few main areas of logic rather than one large scri
 
 ## System overview
 
+See the [schematic](docs/Glasses%20Camera%20Interconnect%20Rev%20D.pdf) for a high-level overview of the system.
+
 ```text
 Glasses hardware
    |
