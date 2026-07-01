@@ -16,6 +16,8 @@ The project is built around a few main areas of logic rather than one large scri
 
 ## System overview
 
+To setup the system on the Raspberry Pi, follow the [setup instructions](docs/Setup.md).
+
 See the [schematic](docs/Glasses%20Camera%20Interconnect%20Rev%20D.pdf) for how the hardware components are connected.
 
 ```text
