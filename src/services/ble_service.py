@@ -1,18 +1,19 @@
-"""BLE setup and signalling service for Lifelog Capture.
+"""
+The Raspberry Pi advertises as a BLE peripheral called "Lifelog Glasses".
+The phone app uses BLE only for setup and discovery, then uses HTTP for the
+actual footage transfer.
 
-This service exposes the Raspberry Pi as a BLE peripheral called
-"Lifelog Glasses". The mobile app uses this channel before it knows the Pi's
-IP address.
+Exposes three BLE characteristics:
 
-BLE responsibilities:
-- scan available WiFi networks
-- receive WiFi credentials from the phone
-- report current WiFi status and IP address
-- report whether footage is ready for HTTP transfer
-- receive small transfer commands, such as transfer status request or ack
+1. WiFi scan, read only
+   The phone reads this to get the nearby SSID list.
 
-BLE is not used for the video or photo bytes. Large file transfer should stay
-on the local HTTP API because BLE is too slow for footage.
+2. WiFi credentials, write only
+   The phone writes SSID and password here so the Pi can join the same WiFi.
+
+3. Device status, read and notify
+   The phone reads or subscribes to this to get connection state, IP address
+   and pending file count.
 """
 
 from __future__ import annotations
@@ -27,25 +28,27 @@ from bless import GATTAttributePermissions, GATTCharacteristicProperties
 from src.config import (
     BLE_DEVICE_NAME,
     BLE_SERVICE_UUID,
-    BLE_TRANSFER_COMMAND_UUID,
-    BLE_TRANSFER_STATUS_UUID,
     BLE_WIFI_CREDENTIALS_UUID,
     BLE_WIFI_SCAN_UUID,
     BLE_WIFI_STATUS_UUID,
 )
 from src.drivers.ble_driver import BleCharacteristicConfig, BleDriver
-from src.utils.ble_utils import decode_json, json_bytes
 from src.services.transfer_service import TransferService
 from src.services.wifi_service import WifiService
+from src.utils.ble_utils import decode_json, json_bytes
 
 logger = logging.getLogger(__name__)
+
+# BLE_WIFI_STATUS_UUID is used as the single device status characteristic.
+# It now includes both WiFi status and transfer readiness.
+DEVICE_STATUS_UUID = BLE_WIFI_STATUS_UUID
 
 
 class BleService:
     """Application-level BLE lifecycle and command handler.
 
-    The service runs in a background thread so it does not block the main
-    capture app. Internally it uses BleDriver, which hides the Bless API.
+    The Bless-specific code lives in BleDriver. This class only decides what
+    the phone can read or write and how that maps onto the app services.
     """
 
     def __init__(
@@ -86,12 +89,12 @@ class BleService:
             self._thread.join(timeout=3)
 
     def _run_thread(self) -> None:
-        """Thread entry point for the asyncio BLE loop."""
+        """Bridge the background thread into the asyncio BLE loop."""
 
         asyncio.run(self._run())
 
     async def _run(self) -> None:
-        """Start the driver and periodically publish fresh status values."""
+        """Start the BLE driver and keep the device status value fresh."""
 
         self._loop = asyncio.get_running_loop()
         self._stop_event = asyncio.Event()
@@ -108,24 +111,23 @@ class BleService:
 
         try:
             while not self._stop_event.is_set():
-                await self._publish_status()
+                await self._publish_device_status()
                 await asyncio.wait_for(self._stop_event.wait(), timeout=5)
         except asyncio.TimeoutError:
-            # wait_for raises TimeoutError during the normal periodic refresh loop.
-            # The next loop iteration will publish status again.
+            # A timeout is expected during the periodic refresh loop.
             pass
         finally:
             await self._driver.stop()
             logger.info("BLE service stopped")
 
     def _characteristics(self) -> list[BleCharacteristicConfig]:
-        """Define the GATT characteristics exposed by the Pi."""
+        """Define the simplified GATT API exposed by the Pi."""
 
         return [
             BleCharacteristicConfig(
                 uuid=BLE_WIFI_SCAN_UUID,
-                properties=GATTCharacteristicProperties.read | GATTCharacteristicProperties.write,
-                permissions=GATTAttributePermissions.readable | GATTAttributePermissions.writeable,
+                properties=GATTCharacteristicProperties.read,
+                permissions=GATTAttributePermissions.readable,
                 initial_value=json_bytes(self._wifi_scan_payload()),
             ),
             BleCharacteristicConfig(
@@ -135,22 +137,10 @@ class BleService:
                 initial_value=json_bytes({}),
             ),
             BleCharacteristicConfig(
-                uuid=BLE_WIFI_STATUS_UUID,
+                uuid=DEVICE_STATUS_UUID,
                 properties=GATTCharacteristicProperties.read | GATTCharacteristicProperties.notify,
                 permissions=GATTAttributePermissions.readable,
-                initial_value=json_bytes(self._wifi_status_payload()),
-            ),
-            BleCharacteristicConfig(
-                uuid=BLE_TRANSFER_STATUS_UUID,
-                properties=GATTCharacteristicProperties.read | GATTCharacteristicProperties.notify,
-                permissions=GATTAttributePermissions.readable,
-                initial_value=json_bytes(self._transfer_ready_payload()),
-            ),
-            BleCharacteristicConfig(
-                uuid=BLE_TRANSFER_COMMAND_UUID,
-                properties=GATTCharacteristicProperties.write,
-                permissions=GATTAttributePermissions.writeable,
-                initial_value=json_bytes({}),
+                initial_value=json_bytes(self._device_status_payload()),
             ),
         ]
 
@@ -160,44 +150,18 @@ class BleService:
         if characteristic_uuid == BLE_WIFI_SCAN_UUID:
             return json_bytes(self._wifi_scan_payload())
 
-        if characteristic_uuid == BLE_WIFI_STATUS_UUID:
-            return json_bytes(self._wifi_status_payload())
-
-        if characteristic_uuid == BLE_TRANSFER_STATUS_UUID:
-            return json_bytes(self._transfer_ready_payload())
+        if characteristic_uuid == DEVICE_STATUS_UUID:
+            return json_bytes(self._device_status_payload())
 
         return current_value
 
     def _write_request(self, characteristic_uuid: str, value: bytearray) -> None:
         """Handle commands written by the phone."""
 
-        payload = decode_json(value)
+        if characteristic_uuid != BLE_WIFI_CREDENTIALS_UUID:
+            raise ValueError("Unsupported BLE write")
 
-        if characteristic_uuid == BLE_WIFI_SCAN_UUID:
-            self._handle_wifi_scan_request(payload)
-            return
-
-        if characteristic_uuid == BLE_WIFI_CREDENTIALS_UUID:
-            self._handle_wifi_credentials(payload)
-            return
-
-        if characteristic_uuid == BLE_TRANSFER_COMMAND_UUID:
-            self._handle_transfer_command(payload)
-            return
-
-        raise ValueError("Unsupported BLE write")
-
-    def _handle_wifi_scan_request(self, payload: dict[str, Any]) -> None:
-        """Validate a WiFi scan request.
-
-        Reads from BLE_WIFI_SCAN_UUID already return the SSID list. A write to
-        this characteristic is treated as a command to refresh the scan result.
-        """
-
-        if payload.get("type") != "wifi_scan_request":
-            raise ValueError("Expected wifi_scan_request")
-
-        self._schedule_status_publish()
+        self._handle_wifi_credentials(decode_json(value))
 
     def _handle_wifi_credentials(self, payload: dict[str, Any]) -> None:
         """Connect the Pi to WiFi using credentials sent by the phone."""
@@ -212,50 +176,25 @@ class BleService:
             raise ValueError("ssid and password must be strings")
 
         self.wifi_service.connect(ssid, password)
-        self._schedule_status_publish()
+        self._schedule_device_status_publish()
 
-    def _handle_transfer_command(self, payload: dict[str, Any]) -> None:
-        """Handle small transfer commands sent over BLE."""
-
-        command_type = payload.get("type")
-
-        if command_type == "transfer_status_request":
-            self._schedule_status_publish()
-            return
-
-        if command_type == "ack":
-            file_id = payload.get("file_id")
-
-            if not isinstance(file_id, str):
-                raise ValueError("file_id must be a string")
-
-            self.transfer_service.acknowledge(file_id)
-            self._schedule_status_publish()
-            return
-
-        raise ValueError("Unsupported transfer command")
-
-    def _schedule_status_publish(self) -> None:
-        """Publish status from sync callbacks without blocking Bless."""
+    def _schedule_device_status_publish(self) -> None:
+        """Publish status from a synchronous BLE callback."""
 
         if self._loop is None:
             return
 
-        asyncio.run_coroutine_threadsafe(self._publish_status(), self._loop)
+        asyncio.run_coroutine_threadsafe(self._publish_device_status(), self._loop)
 
-    async def _publish_status(self) -> None:
-        """Update notify characteristics with the latest app state."""
+    async def _publish_device_status(self) -> None:
+        """Update the notify characteristic with the latest device status."""
 
         if self._driver is None:
             return
 
         await self._driver.update_value(
-            BLE_WIFI_STATUS_UUID,
-            json_bytes(self._wifi_status_payload()),
-        )
-        await self._driver.update_value(
-            BLE_TRANSFER_STATUS_UUID,
-            json_bytes(self._transfer_ready_payload()),
+            DEVICE_STATUS_UUID,
+            json_bytes(self._device_status_payload()),
         )
 
     def _wifi_scan_payload(self) -> dict[str, Any]:
@@ -266,26 +205,15 @@ class BleService:
             "ssids": self.wifi_service.scan_networks(),
         }
 
-    def _wifi_status_payload(self) -> dict[str, Any]:
-        """Build the current WiFi status payload."""
-
-        status = self.wifi_service.get_status()
-
-        return {
-            "type": "wifi_status",
-            "connected": status.connected,
-            "ssid": status.ssid,
-            "ip": status.ip,
-        }
-
-    def _transfer_ready_payload(self) -> dict[str, Any]:
-        """Build the transfer readiness payload used by the phone."""
+    def _device_status_payload(self) -> dict[str, Any]:
+        """Build the combined WiFi and transfer status payload."""
 
         wifi_status = self.wifi_service.get_status()
         pending_items = self.transfer_service.list_pending_items()
 
         return {
-            "type": "transfer_ready",
+            "type": "device_status",
+            "connected": wifi_status.connected,
             "ssid": wifi_status.ssid,
             "ip": wifi_status.ip,
             "file_count": len(pending_items),
