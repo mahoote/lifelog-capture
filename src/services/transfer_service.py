@@ -22,6 +22,7 @@ from enum import StrEnum
 import uvicorn
 
 from src.config import HTTP_HOST, HTTP_PORT
+from src.services import storage_service
 from src.services.ble_service import BleService
 from src.services.http_server import app as http_app
 from src.services.wifi_service import WifiService
@@ -105,7 +106,7 @@ class TransferService:
         ble_connected = self.ble_service.is_connected()
         wifi_status = self.wifi_service.get_status()
         wifi_connected = wifi_status.connected and wifi_status.ip is not None
-        file_count = len(self.list_pending_items())
+        file_count = len(storage_service.list_pending())
 
         if not ble_connected:
             step = TransferStep.WAITING_FOR_BLE
