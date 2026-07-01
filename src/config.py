@@ -10,10 +10,6 @@ Sizes are written as (width, height) in pixels.
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 DATABASE_PATH = DATA_DIR / "lifelog.db"
-FOOTAGE_DIR = DATA_DIR / "footage"
-
-HTTP_HOST = "0.0.0.0"
-HTTP_PORT = 8000
 
 BLE_DEVICE_NAME = "Lifelog Glasses"
 
