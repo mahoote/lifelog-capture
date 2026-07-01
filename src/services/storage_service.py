@@ -2,7 +2,7 @@ from datetime import datetime
 from pathlib import Path
 
 from src.database import add_item
-from src.types.footage_item import FootageType, FootageItemInsert
+from src.types.footage_item import FootageType, FootageItemInsert, FootageItem
 from src.types.motion_state import MotionState
 from src.utils.math_utils import calculate_sha256
 
@@ -27,3 +27,7 @@ def storage_write_item(file_path: Path, size_bytes: int, footage_type: FootageTy
     )
 
     add_item(new_footage_item)
+
+
+def list_pending() -> list[FootageItem]:
+    pass

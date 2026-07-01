@@ -33,7 +33,7 @@ from src.config import (
     BLE_WIFI_STATUS_UUID,
 )
 from src.drivers.ble_driver import BleCharacteristicConfig, BleDriver
-from src.services.transfer_service import TransferService
+from src.services import storage_service
 from src.services.wifi_service import WifiService
 from src.utils.ble_utils import decode_json, json_bytes
 
@@ -54,11 +54,9 @@ class BleService:
     def __init__(
             self,
             *,
-            wifi_service: WifiService,
-            transfer_service: TransferService,
+            wifi_service: WifiService
     ):
         self.wifi_service = wifi_service
-        self.transfer_service = transfer_service
         self._thread: threading.Thread | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._stop_event: asyncio.Event | None = None
@@ -209,7 +207,7 @@ class BleService:
         """Build the combined WiFi and transfer status payload."""
 
         wifi_status = self.wifi_service.get_status()
-        pending_items = self.transfer_service.list_pending_items()
+        pending_items = storage_service.list_pending()
 
         return {
             "type": "device_status",
