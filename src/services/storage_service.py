@@ -30,4 +30,4 @@ def storage_write_item(file_path: Path, size_bytes: int, footage_type: FootageTy
 
 
 def list_pending() -> list[FootageItem]:
-    pass
+    raise NotImplementedError
