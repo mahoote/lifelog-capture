@@ -103,7 +103,7 @@ class TransferService:
     def get_status(self) -> TransferStatus:
         """Return the current BLE, WiFi and transfer readiness state."""
 
-        ble_connected = self.ble_service.is_connected()
+        ble_connected = self.ble_service.is_phone_connected()
         wifi_status = self.wifi_service.get_status()
         wifi_connected = wifi_status.connected and wifi_status.ip is not None
         file_count = len(storage_service.list_pending())

@@ -195,7 +195,7 @@ class BleService:
             json_bytes(self._device_status_payload()),
         )
 
-    def is_central_connected(self) -> bool:
+    def is_phone_connected(self) -> bool:
         """Return True if a central (phone) is currently subscribed to the
         device status notify characteristic.
 
