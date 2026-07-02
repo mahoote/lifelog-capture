@@ -38,9 +38,10 @@ class CaptureService:
 
         self._stop_capture_event.clear()
         self.log_service.resume_capture_mode()
+
         self._motion_thread = threading.Thread(
             target=self.motion_worker.run,
-            kwargs={"stop_event": self._stop_capture_event},
+            args=(self._stop_capture_event,),
             name="motion-detector",
             daemon=True,
         )
@@ -49,6 +50,7 @@ class CaptureService:
             name="capture",
             daemon=True,
         )
+
         self._motion_thread.start()
         self._capture_thread.start()
 
