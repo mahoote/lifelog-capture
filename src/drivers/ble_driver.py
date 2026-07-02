@@ -126,3 +126,53 @@ class BleDriver:
 
         uuid = str(characteristic.uuid)
         self.on_write(uuid, bytearray(value))
+
+    def has_subscribers(self, characteristic_uuid: str) -> bool:
+        """Return True if any central is subscribed to the given characteristic.
+
+        BlessServer's public API for subscribers varies across versions and is
+        implementation-specific. Probe common attributes and methods defensively
+        so this helper works across multiple Bless releases without hard
+        depending on internals.
+        """
+
+        if self.server is None:
+            return False
+
+        try:
+            # Common attribute name: subscribers (dict or list)
+            subs = getattr(self.server, "subscribers", None)
+            if subs:
+                if isinstance(subs, dict):
+                    # dict keyed by uuid or (service_uuid, uuid)
+                    # Check for direct key match first.
+                    if characteristic_uuid in subs:
+                        return bool(subs[characteristic_uuid])
+                    # Otherwise check values for any truthy entry.
+                    return any(bool(v) for v in subs.values())
+                if isinstance(subs, (list, set, tuple)):
+                    return len(subs) > 0
+
+            # Some BlessServer versions expose a helper method.
+            get_subs = getattr(self.server, "get_subscribers", None)
+            if callable(get_subs):
+                try:
+                    result = get_subs(self.service_uuid, characteristic_uuid)
+                except TypeError:
+                    # Fallback to single-arg signature
+                    result = get_subs(characteristic_uuid)
+                return bool(result)
+
+            # Other possible attributes
+            for attr in ("subscribed_devices", "subscribed_centrals", "connections"):
+                val = getattr(self.server, attr, None)
+                if val:
+                    if isinstance(val, dict):
+                        return any(bool(v) for v in val.values())
+                    if isinstance(val, (list, set, tuple)):
+                        return len(val) > 0
+
+            return False
+        except Exception:
+            # Be conservative on errors and report no subscribers.
+            return False

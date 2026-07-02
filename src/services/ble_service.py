@@ -195,6 +195,22 @@ class BleService:
             json_bytes(self._device_status_payload()),
         )
 
+    def is_central_connected(self) -> bool:
+        """Return True if a central (phone) is currently subscribed to the
+        device status notify characteristic.
+
+        This delegates to the driver which probes the underlying Bless server
+        state defensively to avoid hard dependencies on library internals.
+        """
+
+        if self._driver is None:
+            return False
+
+        try:
+            return self._driver.has_subscribers(DEVICE_STATUS_UUID)
+        except Exception:
+            return False
+
     def _wifi_scan_payload(self) -> dict[str, Any]:
         """Build the WiFi scan response payload."""
 
