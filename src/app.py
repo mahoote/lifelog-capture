@@ -51,7 +51,6 @@ class LifelogApp:
         self.motion_worker = MotionWorker(
             imu=self.imu,
             detector=self.motion_service,
-            stop_system_event=self.stop_system_event,
         )
 
         self.log_service = LogService(
@@ -67,6 +66,7 @@ class LifelogApp:
         self.capture_service = CaptureService(
             motion_service=self.motion_service,
             log_service=self.log_service,
+            motion_worker=self.motion_worker,
         )
         self.mode_state_machine = ModeStateMachine(
             capture_mode_event=self.capture_mode_event,
@@ -76,12 +76,10 @@ class LifelogApp:
         self.button = self._create_button()
 
         ## Create threads
-        self.motion_thread = self._create_motion_thread()
         self.mode_state_machine_thread = self._create_mode_state_machine_thread()
 
     def start(self) -> None:
         """Start workers and attach button callbacks."""
-        self.motion_thread.start()
         self.mode_state_machine_thread.start()
         self._bind_button_handlers()
 
@@ -92,7 +90,6 @@ class LifelogApp:
     def stop(self) -> None:
         """Ask threads to stop and clean up hardware resources."""
         self.stop_system_event.set()
-        self.motion_thread.join(timeout=2)
         self.mode_state_machine_thread.join(timeout=2)
         self.capture_service.stop()
         self.imu.close()
@@ -103,13 +100,6 @@ class LifelogApp:
             pull_up=True,
             bounce_time=self.config.button_bounce_time_s,
             hold_time=self.config.button_hold_time_s,
-        )
-
-    def _create_motion_thread(self) -> threading.Thread:
-        return threading.Thread(
-            target=self.motion_worker.run,
-            name="motion-detector",
-            daemon=True,
         )
 
     def _create_mode_state_machine_thread(self) -> threading.Thread:

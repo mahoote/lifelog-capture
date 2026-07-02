@@ -19,13 +19,11 @@ class MotionWorker:
             self,
             imu: BMI160Driver,
             detector: MotionService,
-            stop_system_event: threading.Event,
     ):
         self.imu = imu
         self.detector = detector
-        self.stop_system_event = stop_system_event
 
-    def run(self) -> None:
+    def run(self, stop_event: threading.Event) -> None:
         """
         Start the IMU, calibrate, then update motion state until stopped.
 
@@ -33,8 +31,11 @@ class MotionWorker:
         detector.update() themselves, because this worker owns the update loop.
         """
         self.imu.start()
-        self.detector.calibrate_idle()
+        try:
+            self.detector.calibrate_idle()
 
-        while not self.stop_system_event.is_set():
-            self.detector.update()
-            sleep(self.detector.sample_interval_s)
+            while not stop_event.is_set():
+                self.detector.update()
+                sleep(self.detector.sample_interval_s)
+        finally:
+            self.imu.close()

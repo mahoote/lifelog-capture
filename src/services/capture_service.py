@@ -7,6 +7,7 @@ from src.types.footage_item import FootageType
 from src.utils.led_utils import led_on, led_off, led_blink_loop, led_blink
 from src.services.log_service import LogService
 from src.services.motion_service import MotionService
+from src.workers.motion_worker import MotionWorker
 from src.types.motion_state import MotionState
 from src.config import (DEFAULT_CAPTURE_INTERVAL_SECONDS,
                         IDLE_CAPTURE_INTERVAL_SECONDS,
@@ -16,12 +17,19 @@ from src.utils.utils import wait_for_next_capture
 
 
 class CaptureService:
-    def __init__(self, motion_service: MotionService, log_service: LogService):
+    def __init__(
+            self,
+            motion_service: MotionService,
+            log_service: LogService,
+            motion_worker: MotionWorker,
+    ):
         self.motion_service = motion_service
         self.log_service = log_service
+        self.motion_worker = motion_worker
         self._camera = CameraDriver()
         self._capture_interval = DEFAULT_CAPTURE_INTERVAL_SECONDS
         self._capture_thread: threading.Thread | None = None
+        self._motion_thread: threading.Thread | None = None
         self._stop_capture_event = threading.Event()
 
     def start(self) -> None:
@@ -30,11 +38,18 @@ class CaptureService:
 
         self._stop_capture_event.clear()
         self.log_service.resume_capture_mode()
+        self._motion_thread = threading.Thread(
+            target=self.motion_worker.run,
+            kwargs={"stop_event": self._stop_capture_event},
+            name="motion-detector",
+            daemon=True,
+        )
         self._capture_thread = threading.Thread(
             target=self._run_capture,
             name="capture",
             daemon=True,
         )
+        self._motion_thread.start()
         self._capture_thread.start()
 
     def stop(self, timeout_s: float = 3.0) -> None:
@@ -45,6 +60,10 @@ class CaptureService:
         if self._capture_thread is not None:
             self._capture_thread.join(timeout=timeout_s)
             self._capture_thread = None
+
+        if self._motion_thread is not None:
+            self._motion_thread.join(timeout=timeout_s)
+            self._motion_thread = None
 
     def _run_capture(self) -> None:
         """
