@@ -24,7 +24,7 @@ import uvicorn
 from src.config import HTTP_HOST, HTTP_PORT
 from src.services import storage_service
 from src.services.ble_service import BleService
-from src.services.http_server import app as http_app
+from src.services.http_server import app as http_app  # TODO: Create HTTP server
 from src.services.wifi_service import WifiService
 
 logger = logging.getLogger(__name__)
