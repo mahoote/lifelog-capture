@@ -19,11 +19,11 @@ class MotionWorker:
             self,
             imu: BMI160Driver,
             detector: MotionService,
-            stop_event: threading.Event,
+            stop_system_event: threading.Event,
     ):
         self.imu = imu
         self.detector = detector
-        self.stop_event = stop_event
+        self.stop_system_event = stop_system_event
 
     def run(self) -> None:
         """
@@ -35,6 +35,6 @@ class MotionWorker:
         self.imu.start()
         self.detector.calibrate_idle()
 
-        while not self.stop_event.is_set():
+        while not self.stop_system_event.is_set():
             self.detector.update()
             sleep(self.detector.sample_interval_s)
