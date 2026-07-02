@@ -22,7 +22,6 @@ from typing import Any
 
 from bless import BlessServer, GATTAttributePermissions, GATTCharacteristicProperties
 
-
 ReadHandler = Callable[[str, bytearray], bytearray]
 WriteHandler = Callable[[str, bytearray], None]
 
@@ -52,12 +51,12 @@ class BleDriver:
     """
 
     def __init__(
-        self,
-        *,
-        device_name: str,
-        service_uuid: str,
-        on_read: ReadHandler,
-        on_write: WriteHandler,
+            self,
+            *,
+            device_name: str,
+            service_uuid: str,
+            on_read: ReadHandler,
+            on_write: WriteHandler,
     ):
         self.device_name = device_name
         self.service_uuid = service_uuid
@@ -106,7 +105,7 @@ class BleDriver:
 
         await self.server.update_value(self.service_uuid, characteristic_uuid, value)
 
-    def _handle_read(self, characteristic: Any, **kwargs: Any) -> bytearray:
+    def _handle_read(self, characteristic: Any) -> bytearray:
         """Bless read callback.
 
         Bless passes a characteristic object. The service layer only needs the
@@ -117,7 +116,7 @@ class BleDriver:
         current_value = bytearray(characteristic.value or bytearray())
         return self.on_read(uuid, current_value)
 
-    def _handle_write(self, characteristic: Any, value: bytearray, **kwargs: Any) -> None:
+    def _handle_write(self, characteristic: Any, value: bytearray) -> None:
         """Bless write callback.
 
         The write payload is forwarded to the service layer where command
