@@ -10,10 +10,12 @@ class ModeStateMachine:
             self,
             capture_mode_event: threading.Event,
             capture_service: CaptureService,
+            poll_interval_seconds: float = 0.25,
     ):
-        self._capture_service = capture_service
-        self._capture_mode_event = capture_mode_event
-        self._capture_mode_enabled = capture_mode_event.is_set()
+            self._capture_service = capture_service
+            self._capture_mode_event = capture_mode_event
+            self._capture_mode_enabled = capture_mode_event.is_set()
+            self._poll_interval_seconds = poll_interval_seconds
 
     def run(self, stop_system_event: threading.Event) -> None:
         """
@@ -22,14 +24,14 @@ class ModeStateMachine:
         """
         self._set_mode()
 
-        capture_mode_enabled = self._capture_mode_event.is_set()
-
         # Checking if the capture mode has toggled every cycle.
         while not stop_system_event.is_set():
+            capture_mode_enabled = self._capture_mode_event.is_set()
+
             if capture_mode_enabled != self._capture_mode_enabled:
+                self._capture_mode_enabled = capture_mode_enabled
                 self._set_mode()
-                # Save the current state.
-                capture_mode_enabled = self._capture_mode_enabled
+            stop_system_event.wait(timeout=self._poll_interval_seconds)
 
         self._capture_service.stop()
 

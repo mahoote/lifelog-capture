@@ -22,12 +22,13 @@ class CaptureService:
         self._camera = CameraDriver()
         self._capture_interval = DEFAULT_CAPTURE_INTERVAL_SECONDS
         self._capture_thread: threading.Thread | None = None
-        self._stop_event = threading.Event()
+        self._stop_capture_event = threading.Event()
 
     def start(self) -> None:
         if self._capture_thread is not None and self._capture_thread.is_alive():
             return
 
+        self._stop_capture_event.clear()
         self.log_service.resume_capture_mode()
         self._capture_thread = threading.Thread(
             target=self._run_capture,
@@ -37,8 +38,8 @@ class CaptureService:
         self._capture_thread.start()
 
     def stop(self, timeout_s: float = 3.0) -> None:
+        self._stop_capture_event.set()
         self.log_service.pause_capture_mode()
-        self._stop_event.set()
         led_off()
 
         if self._capture_thread is not None:
@@ -60,23 +61,26 @@ class CaptureService:
             self._camera.start_camera()
             camera_started = True
 
-            led_on()
+            while not self._stop_capture_event.is_set():
+                led_on()
 
-            match self.motion_service.state:
-                case MotionState.IDLE:
-                    self._capture_interval = IDLE_CAPTURE_INTERVAL_SECONDS
-                    self._capture_photo()
-                case MotionState.ACTIVE:
-                    self._capture_interval = VIDEO_CAPTURE_INTERVAL_SECONDS
-                    self._capture_video()
-                case _:
-                    self._capture_interval = DEFAULT_CAPTURE_INTERVAL_SECONDS
-                    self._capture_photo()
+                match self.motion_service.state:
+                    case MotionState.IDLE:
+                        self._capture_interval = IDLE_CAPTURE_INTERVAL_SECONDS
+                        self._capture_photo()
+                    case MotionState.ACTIVE:
+                        self._capture_interval = VIDEO_CAPTURE_INTERVAL_SECONDS
+                        self._capture_video()
+                    case _:
+                        self._capture_interval = DEFAULT_CAPTURE_INTERVAL_SECONDS
+                        self._capture_photo()
 
-            wait_for_next_capture(
-                stop_event=self._stop_event,
-                interval_seconds=self._capture_interval,
-            )
+                should_continue = wait_for_next_capture(
+                    stop_event=self._stop_capture_event,
+                    interval_seconds=self._capture_interval,
+                )
+                if not should_continue:
+                    break
 
         except Exception as e:
             errored = True
@@ -89,9 +93,9 @@ class CaptureService:
             if camera_started:
                 self._camera.stop_camera()
 
-        if errored and not self._stop_event.is_set():
+        if errored and not self._stop_capture_event.is_set():
             led_blink_loop(
-                stop_event=self._stop_event,
+                stop_event=self._stop_capture_event,
                 on_period_s=0.5,
                 off_period_s=0.5,
             )
