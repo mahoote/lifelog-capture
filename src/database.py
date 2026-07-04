@@ -82,13 +82,16 @@ def add_item(item: FootageItemInsert) -> None:
 
         connection.commit()
 
-def set_state(item_id: int, new_state: FootageState) -> None:
+def set_item_state(id: str, new_state: FootageState) -> bool:
     """
     Update the state of a FootageItem in the upload queue.
 
     Args:
-        item_id (int): The ID of the footage item to update.
+        id (str): The ID of the footage item to update.
         new_state (FootageState): The new state to set.
+
+    Returns:
+        bool: True if the update was successful, False otherwise.
     """
     with get_connection() as connection:
         cursor = connection.cursor()
@@ -99,10 +102,11 @@ def set_state(item_id: int, new_state: FootageState) -> None:
             SET state = ?
             WHERE id = ?
             """,
-            (new_state, item_id)
+            (new_state, id)
         )
 
         connection.commit()
+        return cursor.rowcount > 0
 
 def get_pending_items() -> list[FootageItem]:
     """
@@ -124,3 +128,27 @@ def get_pending_items() -> list[FootageItem]:
 
         rows = cursor.fetchall()
         return [FootageItem(**row) for row in rows]
+
+def delete_item_by_id(id: str) -> bool:
+    """
+    Delete a FootageItem from the upload queue.
+
+    Args:
+        id (str): The ID of the footage item to delete.
+
+    Returns:
+        bool: True if the delete was successful, False otherwise.
+    """
+    with get_connection() as connection:
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            DELETE FROM footage_item
+            WHERE id = ?
+            """,
+            (id,)
+        )
+
+        connection.commit()
+        return cursor.rowcount > 0

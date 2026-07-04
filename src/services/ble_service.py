@@ -33,7 +33,7 @@ from src.config import (
     BLE_WIFI_STATUS_UUID,
 )
 from src.drivers.ble_driver import BleCharacteristicConfig, BleDriver
-from src.services import storage_service
+from src.services import storage
 from src.services.wifi_service import WifiService
 from src.utils.ble_utils import decode_json, json_bytes
 
@@ -223,7 +223,7 @@ class BleService:
         """Build the combined WiFi and transfer status payload."""
 
         wifi_status = self.wifi_service.get_status()
-        pending_items = storage_service.list_pending()
+        pending_items = storage.list_pending()
 
         return {
             "type": "device_status",
