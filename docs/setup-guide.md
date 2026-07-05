@@ -2,11 +2,12 @@
 
 ## Install project dependencies
 
-Install the system packages needed for Bluetooth, WiFi management, the screen session, SQLite inspection and I2C debugging:
+Install the system packages needed for Bluetooth, WiFi management, the screen session, SQLite inspection and I2C
+debugging:
 
 ```bash
 sudo apt update
-sudo apt install bluetooth bluez network-manager screen sqlite3 i2c-tools
+sudo apt install bluetooth screen sqlite3
 ```
 
 Enable and start the Bluetooth service:
@@ -23,10 +24,16 @@ sudo systemctl enable NetworkManager
 sudo systemctl start NetworkManager
 ```
 
-From the project root, install the Python dependencies:
+If you do not see .venv, create it:
 
 ```bash
 cd ~/lifelog-capture
+python3 -m venv .venv
+```
+
+From the project root, install the Python dependencies:
+
+```bash
 source .venv/bin/activate
 pip install fastapi uvicorn bless pydantic
 ```
@@ -37,12 +44,12 @@ pip install fastapi uvicorn bless pydantic
 
 The BMI160 is wired to the Raspberry Pi's main I2C pins:
 
-| BMI160 | Raspberry Pi Zero 2 W |
-|---|---|
-| VCC | 3.3 V |
-| GND | GND |
-| SDA | GPIO 2, physical pin 3 |
-| SCL | GPIO 3, physical pin 5 |
+| BMI160 | Raspberry Pi Zero 2 W  |
+|--------|------------------------|
+| VCC    | 3.3 V                  |
+| GND    | GND                    |
+| SDA    | GPIO 2, physical pin 3 |
+| SCL    | GPIO 3, physical pin 5 |
 
 These pins use I2C bus 1, which should appear as:
 
@@ -116,7 +123,8 @@ Expected result should include:
 
 ## Start lifelog capture on boot in screen
 
-Use a `systemd` service to start the capture app inside a detached `screen` session named `pi`. This lets you reconnect later to see logs or stop the program manually.
+Use a `systemd` service to start the capture app inside a detached `screen` session named `pi`. This lets you reconnect
+later to see logs or stop the program manually.
 
 ### Create the systemd service
 
@@ -213,7 +221,8 @@ If you stop the program manually with `Ctrl + C` while `Restart=on-failure` is e
 
 ## Inspect the SQLite database with sqlite3
 
-Use `sqlite3` on the Pi to quickly view the database tables and rows from the terminal. This is lighter than using a graphical database browser on the Pi Zero 2 W.
+Use `sqlite3` on the Pi to quickly view the database tables and rows from the terminal. This is lighter than using a
+graphical database browser on the Pi Zero 2 W.
 
 ### Open the database
 
@@ -256,20 +265,20 @@ If `.mode box` is not supported, use:
 ### View rows
 
 ```sql
-SELECT * FROM footage_item;
+SELECT *
+FROM footage_item;
 ```
 
 For a cleaner view:
 
 ```sql
-SELECT
-    id,
-    type,
-    created_at,
-    file_path,
-    size_bytes,
-    state,
-    attempt_count
+SELECT id,
+       type,
+       created_at,
+       file_path,
+       size_bytes,
+       state,
+       attempt_count
 FROM footage_item;
 ```
 
