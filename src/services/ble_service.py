@@ -33,7 +33,7 @@ from src.config import (
     BLE_WIFI_STATUS_UUID,
 )
 from src.drivers.ble_driver import BleCharacteristicConfig, BleDriver
-from src.services import storage
+from src.services import storage_service as storage
 from src.services.wifi_service import WifiService
 from src.utils.ble_utils import decode_json, json_bytes
 

@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
-from src.services import storage
+from src.services import storage_service
 from src.services.wifi_service import WifiService
 from src.types.footage_item import FootageState
 
@@ -39,13 +39,13 @@ def list_footage():
             "capture_end_at": item.capture_end_at.isoformat() if item.capture_end_at else None,
             "last_error": item.last_error,
         }
-        for item in storage.list_pending()
+        for item in storage_service.list_pending()
     ]
 
 
 @app.post("/ack")
 def ack_file(request: AckRequest):
-    success = storage.update_state(request.file_id, FootageState.ACKED)
+    success = storage_service.update_state(request.file_id, FootageState.ACKED)
 
     if not success:
         raise HTTPException(status_code=404, detail="File not found")

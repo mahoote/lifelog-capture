@@ -2,7 +2,7 @@ import logging
 import threading
 
 from src.drivers.camera_driver import CameraDriver
-from src.services import storage
+from src.services import storage_service
 from src.types.footage_item import FootageType
 from src.utils.led_utils import led_on, led_off, led_blink_loop, led_blink
 from src.services.log_service import LogService
@@ -130,7 +130,7 @@ class CaptureService:
 
         self.log_service.record_footage_taken()
 
-        storage.write_item(
+        storage_service.write_item(
             file_path=footage_path,
             size_bytes=footage_path.stat().st_size,
             footage_type=FootageType.PHOTO,
@@ -165,7 +165,7 @@ class CaptureService:
             logging.info(f"Captured video: {footage_path}")
             self.log_service.record_footage_taken()
 
-            storage.write_item(
+            storage_service.write_item(
                 file_path=footage_path,
                 size_bytes=footage_path.stat().st_size,
                 footage_type=FootageType.VIDEO,
