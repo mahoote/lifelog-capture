@@ -3,6 +3,7 @@ from __future__ import annotations
 import threading
 
 from src.services.capture_service import CaptureService
+from src.services.transfer_service import TransferService
 
 
 class ModeStateMachine:
@@ -10,12 +11,14 @@ class ModeStateMachine:
             self,
             capture_mode_event: threading.Event,
             capture_service: CaptureService,
+            transfer_service: TransferService,
             poll_interval_seconds: float = 0.25,
     ):
-            self._capture_service = capture_service
-            self._capture_mode_event = capture_mode_event
-            self._capture_mode_enabled = capture_mode_event.is_set()
-            self._poll_interval_seconds = poll_interval_seconds
+        self._capture_service = capture_service
+        self._transfer_service = transfer_service
+        self._capture_mode_event = capture_mode_event
+        self._capture_mode_enabled = capture_mode_event.is_set()
+        self._poll_interval_seconds = poll_interval_seconds
 
     def run(self, stop_system_event: threading.Event) -> None:
         """
@@ -45,9 +48,9 @@ class ModeStateMachine:
             self._enter_transfer_mode()
 
     def _enter_capture_mode(self) -> None:
-        # TODO: Implement transfer mode stop logic
+        self._transfer_service.stop()
         self._capture_service.start()
 
     def _enter_transfer_mode(self) -> None:
         self._capture_service.stop()
-        # TODO: Implement transfer mode start logic
+        self._transfer_service.start()

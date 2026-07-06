@@ -16,6 +16,8 @@ from dataclasses import dataclass
 from signal import pause
 from gpiozero import Button
 
+from src.services.http_server import wifi_service
+from src.services.transfer_service import TransferService
 from src.utils.button_utils import create_button_handlers
 from src.services.capture_service import CaptureService
 from src.drivers.bmi160_driver import BMI160Driver
@@ -68,9 +70,12 @@ class LifelogApp:
             log_service=self.log_service,
             motion_worker=self.motion_worker,
         )
+        self.transfer_service = TransferService()
+
         self.mode_state_machine = ModeStateMachine(
             capture_mode_event=self.capture_mode_event,
             capture_service=self.capture_service,
+            transfer_service=self.transfer_service,
         )
 
         self.button = self._create_button()

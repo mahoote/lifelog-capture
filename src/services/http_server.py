@@ -1,16 +1,11 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
 from src.services import storage
-from src.services.transfer_service import TransferService
 from src.services.wifi_service import WifiService
 from src.types.footage_item import FootageState
 
 app = FastAPI()
-
-transfer_service = TransferService()
-wifi_service = WifiService()
 
 
 class AckRequest(BaseModel):
@@ -18,8 +13,8 @@ class AckRequest(BaseModel):
 
 
 @app.get("/health")
-def health():
-    wifi = wifi_service.get_status()
+def health(request: Request):
+    wifi = _get_wifi_service(request).get_status()
 
     return {
         "ok": True,
@@ -56,3 +51,12 @@ def ack_file(request: AckRequest):
         raise HTTPException(status_code=404, detail="File not found")
 
     return {"ok": True}
+
+
+def _get_wifi_service(request: Request) -> WifiService:
+    wifi_service = getattr(request.app.state, "wifi_service", None)
+
+    if wifi_service is None:
+        raise RuntimeError("WiFi service has not been configured")
+
+    return wifi_service
