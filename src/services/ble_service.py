@@ -91,7 +91,10 @@ class BleService:
     def _run_thread(self) -> None:
         """Bridge the background thread into the asyncio BLE loop."""
 
-        asyncio.run(self._run())
+        try:
+            asyncio.run(self._run())
+        except Exception:
+            logger.exception("BLE service thread crashed")
 
     async def _run(self) -> None:
         """Start the BLE driver and keep the device status value fresh."""
@@ -106,7 +109,13 @@ class BleService:
             on_write=self._write_request,
         )
 
-        await self._driver.start(self._characteristics())
+        try:
+            await self._driver.start(self._characteristics())
+        except Exception:
+            logger.exception("Failed to start BLE service")
+            await self._driver.stop()
+            return
+
         logger.info("BLE service started as %s", BLE_DEVICE_NAME)
 
         try:
