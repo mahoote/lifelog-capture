@@ -113,8 +113,8 @@ class BleService:
         try:
             await self._driver.start(self._characteristics())
             started = True
-        except Exception:
-            logger.exception("Failed to start BLE service")
+        except Exception as exc:
+            logger.error("Failed to start BLE service: %s", exc)
             return
 
         logger.info("BLE service started as %s", BLE_DEVICE_NAME)
