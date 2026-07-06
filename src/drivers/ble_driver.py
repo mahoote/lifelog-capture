@@ -18,9 +18,12 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+import logging
 from typing import Any
 
 from bless import BlessServer, GATTAttributePermissions, GATTCharacteristicProperties
+
+logger = logging.getLogger(__name__)
 
 ReadHandler = Callable[[str, bytearray], bytearray]
 WriteHandler = Callable[[str, bytearray], None]
@@ -90,7 +93,10 @@ class BleDriver:
         if self.server is None:
             return
 
-        await self.server.stop()
+        try:
+            await self.server.stop()
+        except Exception:
+            logger.warning("BLE server stop failed; continuing shutdown", exc_info=True)
         self.server = None
 
     async def update_value(self, characteristic_uuid: str, value: bytearray) -> None:

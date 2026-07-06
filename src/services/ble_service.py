@@ -109,11 +109,12 @@ class BleService:
             on_write=self._write_request,
         )
 
+        started = False
         try:
             await self._driver.start(self._characteristics())
+            started = True
         except Exception:
             logger.exception("Failed to start BLE service")
-            await self._driver.stop()
             return
 
         logger.info("BLE service started as %s", BLE_DEVICE_NAME)
@@ -126,8 +127,9 @@ class BleService:
             # A timeout is expected during the periodic refresh loop.
             pass
         finally:
-            await self._driver.stop()
-            logger.info("BLE service stopped")
+            if started:
+                await self._driver.stop()
+                logger.info("BLE service stopped")
 
     def _characteristics(self) -> list[BleCharacteristicConfig]:
         """Define the simplified GATT API exposed by the Pi."""
