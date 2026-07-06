@@ -1,11 +1,14 @@
+import logging
 from datetime import datetime
 from pathlib import Path
 
 from src.database import add_item, get_pending_items, set_item_state, delete_item_by_id
-from src.services.ble_service import logger
 from src.types.footage_item import FootageType, FootageItemInsert, FootageItem, FootageState
 from src.types.motion_state import MotionState
 from src.utils.math_utils import calculate_sha256
+
+
+logger = logging.getLogger(__name__)
 
 
 def write_item(file_path: Path, size_bytes: int, footage_type: FootageType, motion_state: MotionState,
