@@ -105,8 +105,6 @@ class TransferService:
         )
         self._http_thread.start()
 
-        logger.info("HTTP server running at %s:%d", HTTP_HOST, HTTP_PORT)
-
     def _stop_http_server(self) -> None:
         """Ask uvicorn to stop and wait briefly for the thread."""
 
