@@ -7,7 +7,7 @@ debugging:
 
 ```bash
 sudo apt update
-sudo apt install bluetooth screen sqlite3
+sudo apt install bluetooth screen sqlite3 libcamera-apps
 ```
 
 Enable and start the Bluetooth service:
@@ -28,14 +28,14 @@ If you do not see .venv, create it:
 
 ```bash
 cd ~/lifelog-capture
-python3 -m venv .venv
+python3 -m venv --system-site-packages .venv
 ```
 
 From the project root, install the Python dependencies:
 
 ```bash
 source .venv/bin/activate
-pip install fastapi uvicorn bless pydantic
+pip install fastapi uvicorn bless pydantic gpiozero
 ```
 
 ---
