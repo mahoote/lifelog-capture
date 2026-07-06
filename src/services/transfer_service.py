@@ -71,6 +71,7 @@ class TransferService:
 
     def start(self) -> None:
         """Start HTTP, start BLE and begin monitoring transfer readiness."""
+        logger.info("Starting transfer mode")
 
         self._stop_event.clear()
         self._start_http_server()
@@ -78,6 +79,7 @@ class TransferService:
 
     def stop(self) -> None:
         """Stop BLE, stop HTTP."""
+        logger.info("Stopping transfer mode")
 
         self._stop_event.set()
         self.ble_service.stop()
@@ -103,6 +105,8 @@ class TransferService:
         )
         self._http_thread.start()
 
+        logger.info("HTTP server running at %s:%d", HTTP_HOST, HTTP_PORT)
+
     def _stop_http_server(self) -> None:
         """Ask uvicorn to stop and wait briefly for the thread."""
 
@@ -111,3 +115,4 @@ class TransferService:
 
         if self._http_thread is not None:
             self._http_thread.join(timeout=3)
+            logger.info("Stopped HTTP server")

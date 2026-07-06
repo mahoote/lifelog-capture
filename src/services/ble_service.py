@@ -75,6 +75,8 @@ class BleService:
         )
         self._thread.start()
 
+        logger.info("BLE service running")
+
     def stop(self) -> None:
         """Stop BLE and wait briefly for the background thread to exit."""
 

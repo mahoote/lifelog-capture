@@ -72,7 +72,7 @@ class CaptureService:
         Run a capture loop until stop is requested.
         Will also detect motion and set the capture interval and mode based on it.
         """
-        print("Running capture loop")
+        logging.info("Starting capture mode")
 
         camera_started = False
         errored = False
@@ -105,10 +105,10 @@ class CaptureService:
 
         except Exception as e:
             errored = True
-            print(f"Error running capture logic: {e}")
+            logging.error(f"Error running capture logic: {e}")
 
         finally:
-            print("Stopping capture loop")
+            logging.info("Stopping capture mode")
             led_off()
 
             if camera_started:
