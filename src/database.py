@@ -130,6 +130,28 @@ def get_pending_items() -> list[FootageItem]:
         rows = cursor.fetchall()
         return [row_to_footage_item(row) for row in rows]
 
+def get_item_by_id(id: str) -> FootageItem | None:
+    """
+    Retrieve one FootageItem by ID.
+    """
+    with get_connection() as connection:
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            SELECT * FROM footage_item
+            WHERE id = ?
+            """,
+            (id,)
+        )
+
+        row = cursor.fetchone()
+
+        if row is None:
+            return None
+
+        return row_to_footage_item(row)
+
 def delete_item_by_id(id: str) -> bool:
     """
     Delete a FootageItem from the upload queue.

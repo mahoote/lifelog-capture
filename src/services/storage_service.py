@@ -2,11 +2,10 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from src.database import add_item, get_pending_items, set_item_state, delete_item_by_id
+from src.database import add_item, get_pending_items, set_item_state, delete_item_by_id, get_item_by_id
 from src.types.footage_item import FootageType, FootageItemInsert, FootageItem, FootageState
 from src.types.motion_state import MotionState
 from src.utils.math_utils import calculate_sha256
-
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +51,13 @@ def list_pending() -> list[FootageItem]:
     Returns a list of all pending footage items in the database.
     """
     return get_pending_items()
+
+
+def get_item(item_id: str) -> FootageItem | None:
+    """
+    Returns one footage item by ID.
+    """
+    return get_item_by_id(item_id)
 
 
 def delete_item(item_id: str) -> None:
