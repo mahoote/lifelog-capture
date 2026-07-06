@@ -40,7 +40,7 @@ def update_state(item_id: str, new_state: FootageState) -> bool:
     """
     Updates the state of a footage item in the database.
     """
-    if new_state not in FootageState.__members__:
+    if not isinstance(new_state, FootageState):
         logger.error(f"Invalid state '{new_state}' provided for item {item_id}.")
         return False
 

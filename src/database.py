@@ -1,6 +1,7 @@
 import sqlite3
 
 from src.config import DATA_DIR, DATABASE_PATH
+from src.mappers.footage_item_mapper import row_to_footage_item
 from src.types.footage_item import FootageItem, FootageState, FootageItemInsert
 
 
@@ -127,7 +128,7 @@ def get_pending_items() -> list[FootageItem]:
         )
 
         rows = cursor.fetchall()
-        return [FootageItem(**row) for row in rows]
+        return [row_to_footage_item(row) for row in rows]
 
 def delete_item_by_id(id: str) -> bool:
     """
