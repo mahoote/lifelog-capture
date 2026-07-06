@@ -16,7 +16,6 @@ from dataclasses import dataclass
 from signal import pause
 from gpiozero import Button
 
-from src.services.http_server import wifi_service
 from src.services.transfer_service import TransferService
 from src.utils.button_utils import create_button_handlers
 from src.services.capture_service import CaptureService
