@@ -19,6 +19,7 @@ class ModeStateMachine:
         self._capture_mode_event = capture_mode_event
         self._capture_mode_enabled = capture_mode_event.is_set()
         self._poll_interval_seconds = poll_interval_seconds
+        self._has_mounted = False
 
     def run(self, stop_system_event: threading.Event) -> None:
         """
@@ -48,8 +49,13 @@ class ModeStateMachine:
             self._enter_transfer_mode()
 
     def _enter_capture_mode(self) -> None:
-        self._transfer_service.stop()
+        if self._has_mounted:
+            self._transfer_service.stop()
+
         self._capture_service.start()
+
+        if not self._has_mounted:
+            self._has_mounted = True
 
     def _enter_transfer_mode(self) -> None:
         self._capture_service.stop()
