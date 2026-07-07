@@ -10,11 +10,12 @@ The project is built around a few main areas of logic rather than one large scri
 2. motion logic
 3. storage and database logic
 4. transfer logic
-5. BLE setup logic
-6. WiFi and HTTP communication logic
-7. startup and reliability logic
+5. WiFi and HTTP communication logic
+6. startup and reliability logic
 
 ## System overview
+
+To setup the system on the Raspberry Pi, follow the [setup instructions](docs/Setup.md).
 
 See the [schematic](docs/Glasses%20Camera%20Interconnect%20Rev%20D.pdf) for how the hardware components are connected.
 
@@ -29,16 +30,13 @@ Raspberry Pi capture app
    v
 Pending footage queue
    |
-   | BLE setup + WiFi HTTP transfer
+   | WiFi HTTP transfer
    v
 Phone app
 ```
 
 The Raspberry Pi handles capture and local storage. The phone handles setup, receiving footage, and later processing or
 organising the lifelog data.
-
-BLE is used for small setup and status messages. WiFi HTTP is used for actual file transfer because video files are too
-large for BLE.
 
 ## Project structure
 
@@ -137,35 +135,6 @@ The transfer logic should support:
 
 This makes the system safer if the phone disconnects, the app crashes, or the Pi loses power during sync.
 
-## BLE setup logic
-
-BLE is used before the phone knows how to reach the Pi over WiFi.
-
-The BLE logic should support:
-
-- advertising the Pi as the Lifelog glasses device
-- allowing the phone to discover the device
-- sending WiFi scan results to the phone
-- receiving WiFi credentials from the phone
-- reporting WiFi connection status
-- reporting the Pi IP address
-- telling the phone when files are ready to transfer
-
-Example BLE setup flow:
-
-```text
-1. Phone discovers the Pi over BLE.
-2. Phone asks the Pi to scan WiFi networks.
-3. Pi returns available SSIDs.
-4. User selects a network in the phone app.
-5. Phone sends SSID and password over BLE.
-6. Pi connects to WiFi.
-7. Pi reports connected status and IP address.
-8. Phone switches to HTTP for file transfer.
-```
-
-BLE should only carry small JSON messages. It should not carry the actual photo or video files.
-
 ## WiFi and HTTP communication logic
 
 Once the Pi is connected to WiFi, the phone can communicate with it over HTTP.
@@ -221,8 +190,8 @@ Important goals:
 - log useful errors
 - expose enough status for debugging
 
-The project should assume that things can fail. Camera access may fail, storage may be full, WiFi may disconnect, BLE
-may be unreliable, and the phone may stop mid-transfer.
+The project should assume that things can fail. Camera access may fail, storage may be full, WiFi may disconnect, and
+the phone may stop mid-transfer.
 
 ## Privacy logic
 

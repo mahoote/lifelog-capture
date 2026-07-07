@@ -11,6 +11,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 DATABASE_PATH = DATA_DIR / "lifelog.db"
 
+HTTP_HOST = "0.0.0.0"
+HTTP_PORT = 8000
+
 # Time between captures when capture mode is active.
 IDLE_CAPTURE_INTERVAL_SECONDS = 300  # User is not moving, so we can take photos less frequently.
 DEFAULT_CAPTURE_INTERVAL_SECONDS = 120  # User is moving, so we can take photos more frequently.

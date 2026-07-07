@@ -2,40 +2,77 @@ import logging
 import threading
 
 from src.drivers.camera_driver import CameraDriver
-from src.services.storage_service import storage_write_item
+from src.services import storage_service
 from src.types.footage_item import FootageType
 from src.utils.led_utils import led_on, led_off, led_blink_loop, led_blink
 from src.services.log_service import LogService
 from src.services.motion_service import MotionService
+from src.workers.motion_worker import MotionWorker
 from src.types.motion_state import MotionState
-from src.utils.utils import wait_for_next_capture
 from src.config import (DEFAULT_CAPTURE_INTERVAL_SECONDS,
                         IDLE_CAPTURE_INTERVAL_SECONDS,
                         VIDEO_CAPTURE_INTERVAL_SECONDS,
                         VIDEO_DURATION_SECONDS)
+from src.utils.utils import wait_for_next_capture
 
 
 class CaptureService:
-    def __init__(self, motion_service: MotionService, log_service: LogService):
+    def __init__(
+            self,
+            motion_service: MotionService,
+            log_service: LogService,
+            motion_worker: MotionWorker,
+    ):
         self.motion_service = motion_service
         self.log_service = log_service
+        self.motion_worker = motion_worker
         self._camera = CameraDriver()
-        self._storage = None
         self._capture_interval = DEFAULT_CAPTURE_INTERVAL_SECONDS
+        self._capture_thread: threading.Thread | None = None
+        self._motion_thread: threading.Thread | None = None
+        self._stop_capture_event = threading.Event()
 
-    def run_capture(
-            self,
-            stop_event: threading.Event,
-            capture_mode_event: threading.Event,
-    ) -> None:
+    def start(self) -> None:
+        if self._capture_thread is not None and self._capture_thread.is_alive():
+            return
+
+        self._stop_capture_event.clear()
+        self.log_service.resume_capture_mode()
+
+        self._motion_thread = threading.Thread(
+            target=self.motion_worker.run,
+            args=(self._stop_capture_event,),
+            name="motion-detector",
+            daemon=True,
+        )
+        self._capture_thread = threading.Thread(
+            target=self._run_capture,
+            name="capture",
+            daemon=True,
+        )
+
+        self._motion_thread.start()
+        self._capture_thread.start()
+
+    def stop(self, timeout_s: float = 3.0) -> None:
+        self._stop_capture_event.set()
+        self.log_service.pause_capture_mode()
+        led_off()
+
+        if self._capture_thread is not None:
+            self._capture_thread.join(timeout=timeout_s)
+            self._capture_thread = None
+
+        if self._motion_thread is not None:
+            self._motion_thread.join(timeout=timeout_s)
+            self._motion_thread = None
+
+    def _run_capture(self) -> None:
         """
-        Runs a loop to capture photos and videos.
+        Run a capture loop until stop is requested.
         Will also detect motion and set the capture interval and mode based on it.
-
-        The thread remains alive until shutdown is requested.
-        When transfer mode is active, capturing is paused.
         """
-        print("Running capture loop")
+        logging.info("Starting capture mode")
 
         camera_started = False
         errored = False
@@ -45,13 +82,7 @@ class CaptureService:
             self._camera.start_camera()
             camera_started = True
 
-            while not stop_event.is_set():
-                if not capture_mode_event.is_set():
-                    self.log_service.pause_capture_mode()
-                    led_off()
-                    stop_event.wait(timeout=0.25)
-                    continue
-
+            while not self._stop_capture_event.is_set():
                 led_on()
 
                 match self.motion_service.state:
@@ -66,28 +97,26 @@ class CaptureService:
                         self._capture_photo()
 
                 should_continue = wait_for_next_capture(
-                    stop_event=stop_event,
-                    capture_mode_event=capture_mode_event,
+                    stop_event=self._stop_capture_event,
                     interval_seconds=self._capture_interval,
                 )
-
                 if not should_continue:
-                    continue
+                    break
 
         except Exception as e:
             errored = True
-            print(f"Error running capture logic: {e}")
+            logging.error(f"Error running capture logic: {e}")
 
         finally:
-            print("Stopping capture loop")
+            logging.info("Stopping capture mode")
             led_off()
 
             if camera_started:
                 self._camera.stop_camera()
 
-        if errored and not stop_event.is_set():
+        if errored and not self._stop_capture_event.is_set():
             led_blink_loop(
-                stop_event=stop_event,
+                stop_event=self._stop_capture_event,
                 on_period_s=0.5,
                 off_period_s=0.5,
             )
@@ -101,7 +130,7 @@ class CaptureService:
 
         self.log_service.record_footage_taken()
 
-        storage_write_item(
+        storage_service.write_item(
             file_path=footage_path,
             size_bytes=footage_path.stat().st_size,
             footage_type=FootageType.PHOTO,
@@ -136,7 +165,7 @@ class CaptureService:
             logging.info(f"Captured video: {footage_path}")
             self.log_service.record_footage_taken()
 
-            storage_write_item(
+            storage_service.write_item(
                 file_path=footage_path,
                 size_bytes=footage_path.stat().st_size,
                 footage_type=FootageType.VIDEO,

@@ -17,4 +17,6 @@ done
 git fetch || echo "Could not fetch latest changes. Probably offline. Continuing anyway."
 git pull  || echo "Could not pull latest changes. Probably offline. Continuing anyway."
 
+source .venv/bin/activate
+
 python -m src.main

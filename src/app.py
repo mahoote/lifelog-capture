@@ -16,10 +16,12 @@ from dataclasses import dataclass
 from signal import pause
 from gpiozero import Button
 
+from src.services.transfer_service import TransferService
 from src.utils.button_utils import create_button_handlers
 from src.services.capture_service import CaptureService
 from src.drivers.bmi160_driver import BMI160Driver
 from src.services.log_service import LogService
+from src.services.mode_state_machine import ModeStateMachine
 from src.services.motion_service import MotionService
 from src.workers.motion_worker import MotionWorker
 
@@ -37,39 +39,52 @@ class LifelogApp:
     def __init__(self, config: AppConfig):
         self.config = config
 
-        self.stop_event = threading.Event()
+        ## Create events
+        self.stop_system_event = threading.Event()
         self.capture_mode_event = threading.Event()
+
+        ## Set events
         self.capture_mode_event.set()
 
+        ## Instantiate services and drivers
         self.imu = BMI160Driver(address=config.bmi160_address)
         self.motion_service = MotionService(self.imu)
         self.motion_worker = MotionWorker(
             imu=self.imu,
             detector=self.motion_service,
-            stop_event=self.stop_event,
         )
 
         self.log_service = LogService(
             motion_service=self.motion_service,
             logs_dir=config.logs_dir,
         )
+
+        # Set the motion service listener
         self.motion_service.set_state_change_listener(
             self.log_service.record_motion_state_change
         )
-        
+
         self.capture_service = CaptureService(
             motion_service=self.motion_service,
             log_service=self.log_service,
+            motion_worker=self.motion_worker,
+        )
+        self.transfer_service = TransferService()
+
+        self.mode_state_machine = ModeStateMachine(
+            capture_mode_event=self.capture_mode_event,
+            capture_service=self.capture_service,
+            transfer_service=self.transfer_service,
         )
 
         self.button = self._create_button()
-        self.motion_thread = self._create_motion_thread()
-        self.capture_thread = self._create_capture_thread()
+
+        ## Create threads
+        self.mode_state_machine_thread = self._create_mode_state_machine_thread()
 
     def start(self) -> None:
         """Start workers and attach button callbacks."""
-        self.motion_thread.start()
-        self.capture_thread.start()
+        self.mode_state_machine_thread.start()
         self._bind_button_handlers()
 
     def wait(self) -> None:
@@ -78,9 +93,9 @@ class LifelogApp:
 
     def stop(self) -> None:
         """Ask threads to stop and clean up hardware resources."""
-        self.stop_event.set()
-        self.motion_thread.join(timeout=2)
-        self.capture_thread.join(timeout=2)
+        self.stop_system_event.set()
+        self.mode_state_machine_thread.join(timeout=2)
+        self.capture_service.stop()
         self.imu.close()
 
     def _create_button(self) -> Button:
@@ -91,26 +106,19 @@ class LifelogApp:
             hold_time=self.config.button_hold_time_s,
         )
 
-    def _create_motion_thread(self) -> threading.Thread:
+    def _create_mode_state_machine_thread(self) -> threading.Thread:
         return threading.Thread(
-            target=self.motion_worker.run,
-            name="motion-detector",
-            daemon=True,
-        )
-
-    def _create_capture_thread(self) -> threading.Thread:
-        return threading.Thread(
-            target=self.capture_service.run_capture,
-            args=(self.stop_event, self.capture_mode_event),
-            name="capture",
+            target=self.mode_state_machine.run,
+            args=(self.stop_system_event,),
+            name="mode-state-machine",
             daemon=True,
         )
 
     def _bind_button_handlers(self) -> None:
         handle_long_press, handle_button_release = create_button_handlers(
-            self.stop_event,
+            self.stop_system_event,
             self.capture_mode_event,
-            self.capture_thread,
+            self.mode_state_machine_thread,
         )
 
         self.button.when_held = handle_long_press

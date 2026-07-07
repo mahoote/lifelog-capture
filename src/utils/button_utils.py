@@ -1,7 +1,6 @@
 import threading
 from collections.abc import Callable
 
-from src.services.motion_service import MotionService
 from src.utils.utils import shutdown_pi
 
 
@@ -16,10 +15,9 @@ def toggle_capture_mode(capture_mode_event: threading.Event) -> None:
 
 
 def create_button_handlers(
-        stop_event: threading.Event,
+        stop_system_event: threading.Event,
         capture_mode_event: threading.Event,
-        # motion: MotionDetector,
-        capture_thread: threading.Thread,
+        managed_thread: threading.Thread | None = None,
 ) -> tuple[Callable[[], None], Callable[[], None]]:
     """
     Create button handlers for short and long button presses.
@@ -35,7 +33,7 @@ def create_button_handlers(
         """Handle a long button press."""
         print("Long press detected, shutting down")
         button_state["long_press_handled"] = True
-        shutdown_pi(stop_event, capture_thread)
+        shutdown_pi(stop_system_event, managed_thread)
 
     def handle_button_release() -> None:
         """Handle a short button press."""
@@ -45,6 +43,5 @@ def create_button_handlers(
 
         print("Short press detected")
         toggle_capture_mode(capture_mode_event)
-        # toggle_motion_mode(motion)
 
     return handle_long_press, handle_button_release
