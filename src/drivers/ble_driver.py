@@ -72,7 +72,7 @@ class BleDriver:
         """Create the Bless server, add the GATT service and start advertising."""
 
         loop = asyncio.get_running_loop()
-        
+
         self.server = BlessServer(name=self.device_name, loop=loop)
         self.server.read_request_func = self._handle_read
         self.server.write_request_func = self._handle_write
@@ -114,7 +114,7 @@ class BleDriver:
 
         await self.server.update_value(self.service_uuid, characteristic_uuid, value)
 
-    def _handle_read(self, characteristic: Any) -> bytearray:
+    def _handle_read(self, characteristic: Any, **kwargs: Any) -> bytearray:
         """Bless read callback.
 
         Bless passes a characteristic object. The service layer only needs the
@@ -125,7 +125,7 @@ class BleDriver:
         current_value = bytearray(characteristic.value or bytearray())
         return self.on_read(uuid, current_value)
 
-    def _handle_write(self, characteristic: Any, value: bytearray) -> None:
+    def _handle_write(self, characteristic: Any, value: bytearray, **kwargs: Any) -> None:
         """Bless write callback.
 
         The write payload is forwarded to the service layer where command
