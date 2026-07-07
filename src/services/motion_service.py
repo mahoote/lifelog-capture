@@ -144,13 +144,6 @@ class MotionService:
         seconds_since_change = now - self._last_state_change_at
 
         if not force and seconds_since_change < self.state_cooldown_s:
-            logger.debug(
-                "Motion mode change blocked by cooldown: %s -> %s, score=%.2f, remaining=%.1fs",
-                self.state.value,
-                new_state.value,
-                self.score,
-                self.state_cooldown_s - seconds_since_change,
-            )
             return
 
         previous_state = self.state
