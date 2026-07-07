@@ -23,16 +23,19 @@ from src.drivers.bmi160_driver import BMI160Driver
 from src.services.log_service import LogService
 from src.services.mode_state_machine import ModeStateMachine
 from src.services.motion_service import MotionService
+from src.utils.led_utils import led_off
 from src.workers.motion_worker import MotionWorker
 
 
 @dataclass(frozen=True)
 class AppConfig:
-    button_gpio: int = 26
-    bmi160_address: int = 0x69
-    button_bounce_time_s: float = 0.05
-    button_hold_time_s: float = 3.0
-    logs_dir: str = "logs"
+    PGOOD_PIN: int = 22
+    BUTTON_PIN: int = 26
+    CHG_PIN: int = 27
+    BMI160_ADDRESS: int = 0x69
+    BUTTON_BOUNCE_TIME_S: float = 0.05
+    BUTTON_HOLD_TIME_S: float = 3.0
+    LOGS_DIR: str = "logs"
 
 
 class LifelogApp:
@@ -47,7 +50,7 @@ class LifelogApp:
         self.capture_mode_event.set()
 
         ## Instantiate services and drivers
-        self.imu = BMI160Driver(address=config.bmi160_address)
+        self.imu = BMI160Driver(address=config.BMI160_ADDRESS)
         self.motion_service = MotionService(self.imu)
         self.motion_worker = MotionWorker(
             imu=self.imu,
@@ -56,7 +59,7 @@ class LifelogApp:
 
         self.log_service = LogService(
             motion_service=self.motion_service,
-            logs_dir=config.logs_dir,
+            logs_dir=config.LOGS_DIR,
         )
 
         # Set the motion service listener
@@ -82,6 +85,17 @@ class LifelogApp:
         ## Create threads
         self.mode_state_machine_thread = self._create_mode_state_machine_thread()
 
+        # Initialize GPIOS
+        led_off()
+        pgood = Button(config.PGOOD_PIN, pull_up=True)
+        chg = Button(config.CHG_PIN, pull_up=True)
+
+        if pgood.is_pressed:
+            print("USB-C / external input present")
+
+        if chg.is_pressed:
+            print("Battery is charging")
+
     def start(self) -> None:
         """Start workers and attach button callbacks."""
         self.mode_state_machine_thread.start()
@@ -100,10 +114,10 @@ class LifelogApp:
 
     def _create_button(self) -> Button:
         return Button(
-            self.config.button_gpio,
+            self.config.BUTTON_PIN,
             pull_up=True,
-            bounce_time=self.config.button_bounce_time_s,
-            hold_time=self.config.button_hold_time_s,
+            bounce_time=self.config.BUTTON_BOUNCE_TIME_S,
+            hold_time=self.config.BUTTON_HOLD_TIME_S,
         )
 
     def _create_mode_state_machine_thread(self) -> threading.Thread:
