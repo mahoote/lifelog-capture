@@ -80,13 +80,24 @@ class BleService:
     def stop(self) -> None:
         """Stop BLE and wait briefly for the background thread to exit."""
 
-        if self._loop is None or self._stop_event is None:
+        thread = self._thread
+        loop = self._loop
+        stop_event = self._stop_event
+
+        if thread is None:
             return
 
-        self._loop.call_soon_threadsafe(self._stop_event.set)
+        if loop is None or stop_event is None or loop.is_closed():
+            if thread.is_alive():
+                thread.join(timeout=3)
+            self._loop = None
+            self._stop_event = None
+            self._driver = None
+            return
 
-        if self._thread is not None:
-            self._thread.join(timeout=3)
+        loop.call_soon_threadsafe(stop_event.set)
+
+        thread.join(timeout=3)
 
     def _run_thread(self) -> None:
         """Bridge the background thread into the asyncio BLE loop."""
@@ -130,6 +141,10 @@ class BleService:
             if started:
                 await self._driver.stop()
                 logger.info("BLE service stopped")
+
+            self._driver = None
+            self._stop_event = None
+            self._loop = None
 
     def _characteristics(self) -> list[BleCharacteristicConfig]:
         """Define the simplified GATT API exposed by the Pi."""
