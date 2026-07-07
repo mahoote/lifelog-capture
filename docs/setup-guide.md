@@ -7,14 +7,7 @@ debugging:
 
 ```bash
 sudo apt update
-sudo apt install bluetooth screen sqlite3 libcamera-apps
-```
-
-Enable and start the Bluetooth service:
-
-```bash
-sudo systemctl enable bluetooth
-sudo systemctl start bluetooth
+sudo apt install screen sqlite3 libcamera-apps
 ```
 
 Enable and start NetworkManager, this is used by the app to scan and connect to WiFi:
@@ -35,7 +28,7 @@ From the project root, install the Python dependencies:
 
 ```bash
 source .venv/bin/activate
-pip install fastapi uvicorn bless pydantic gpiozero
+pip install fastapi uvicorn pydantic gpiozero
 ```
 
 ---

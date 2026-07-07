@@ -2,54 +2,21 @@ from __future__ import annotations
 
 import logging
 import threading
-from dataclasses import dataclass
-from enum import StrEnum
 
 import uvicorn
 
 from src.config import HTTP_HOST, HTTP_PORT
-from src.services.ble_service import BleService
 from src.services.http_server import app as http_app
 from src.services.wifi_service import WifiService
 
 logger = logging.getLogger(__name__)
 
 
-class TransferStep(StrEnum):
-    """High-level state used by the phone to decide what to do next."""
-
-    WAITING_FOR_BLE = "waiting_for_ble"
-    WAITING_FOR_WIFI = "waiting_for_wifi"
-    READY_TO_TRANSFER = "ready_to_transfer"
-
-
-@dataclass(frozen=True)
-class TransferStatus:
-    """Current transfer readiness state.
-
-    Attributes:
-        step: The next step in the transfer setup flow.
-        ble_connected: True when a phone is connected over BLE.
-        wifi_connected: True when the Pi is connected to WiFi and has an IP.
-        ssid: Current WiFi SSID, if connected.
-        ip: Current Pi IP address, if connected.
-        file_count: Number of footage items waiting for transfer.
-    """
-
-    step: TransferStep
-    ble_connected: bool
-    wifi_connected: bool
-    ssid: str | None
-    ip: str | None
-    file_count: int
-
-
 class TransferService:
-    """Parent service for BLE setup and HTTP file transfer.
+    """Parent service for HTTP file transfer.
 
-    This class starts and stops both child services:
+    This class starts and stops child services:
     - HTTP server for listing, downloading and acknowledging files
-    - BLE service for WiFi setup and transfer readiness signalling
 
     It also provides the manifest and ack methods used by the HTTP routes.
     """
@@ -60,29 +27,23 @@ class TransferService:
         self.wifi_service = WifiService()
         http_app.state.wifi_service = self.wifi_service
 
-        self.ble_service = BleService(
-            wifi_service=self.wifi_service
-        )
-
         self._http_server: uvicorn.Server | None = None
         self._http_thread: threading.Thread | None = None
         self._monitor_thread: threading.Thread | None = None
         self._stop_event = threading.Event()
 
     def start(self) -> None:
-        """Start HTTP, start BLE and begin monitoring transfer readiness."""
+        """Start HTTP and begin monitoring transfer readiness."""
         logger.info("Starting transfer mode")
 
         self._stop_event.clear()
         self._start_http_server()
-        self.ble_service.start()
 
     def stop(self) -> None:
-        """Stop BLE, stop HTTP."""
+        """Stop HTTP."""
         logger.info("Stopping transfer mode")
 
         self._stop_event.set()
-        self.ble_service.stop()
         self._stop_http_server()
 
     def _start_http_server(self) -> None:
