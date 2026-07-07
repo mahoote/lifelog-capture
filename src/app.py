@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from signal import pause
 from gpiozero import Button
 
+from src.services.power_service import PowerService
 from src.services.transfer_service import TransferService
 from src.utils.button_utils import create_button_handlers
 from src.services.capture_service import CaptureService
@@ -46,12 +47,6 @@ class LifelogApp:
         led_off()
         pgood = Button(config.PGOOD_PIN, pull_up=True)
         chg = Button(config.CHG_PIN, pull_up=True)
-
-        if pgood.is_pressed:
-            print("USB-C / external input present")
-
-        if chg.is_pressed:
-            print("Battery is charging")
 
         ## Create events
         self.stop_system_event = threading.Event()
@@ -85,6 +80,8 @@ class LifelogApp:
             capture_mode_event=self.capture_mode_event
         )
         self.transfer_service = TransferService()
+        self.power_service = PowerService(pgood=pgood, chg=chg, capture_mode_event=self.capture_mode_event,
+                                          stop_system_event=self.stop_system_event)
 
         self.mode_state_machine = ModeStateMachine(
             capture_mode_event=self.capture_mode_event,
@@ -100,6 +97,7 @@ class LifelogApp:
     def start(self) -> None:
         """Start workers and attach button callbacks."""
         self.mode_state_machine_thread.start()
+        self.power_service.run_power_monitor()
         self._bind_button_handlers()
 
     def wait(self) -> None:
