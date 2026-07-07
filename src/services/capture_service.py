@@ -22,17 +22,24 @@ class CaptureService:
             motion_service: MotionService,
             log_service: LogService,
             motion_worker: MotionWorker,
+            capture_mode_event: threading.Event
     ):
         self.motion_service = motion_service
         self.log_service = log_service
         self.motion_worker = motion_worker
         self._camera = CameraDriver()
+        self._capture_mode_event = capture_mode_event
         self._capture_interval = DEFAULT_CAPTURE_INTERVAL_SECONDS
         self._capture_thread: threading.Thread | None = None
         self._motion_thread: threading.Thread | None = None
         self._stop_capture_event = threading.Event()
 
     def start(self) -> None:
+        if self._camera.camera_error:
+            logging.error(f"Cannot start capture service: {self._camera.camera_error}")
+            self._capture_mode_event.clear()
+            return
+
         if self._capture_thread is not None and self._capture_thread.is_alive():
             return
 

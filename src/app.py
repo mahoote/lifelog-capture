@@ -82,6 +82,7 @@ class LifelogApp:
             motion_service=self.motion_service,
             log_service=self.log_service,
             motion_worker=self.motion_worker,
+            capture_mode_event=self.capture_mode_event
         )
         self.transfer_service = TransferService()
 
