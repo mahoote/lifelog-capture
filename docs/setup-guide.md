@@ -2,8 +2,7 @@
 
 ## Install project dependencies
 
-Install the system packages needed for Bluetooth, WiFi management, the screen session, SQLite inspection and I2C
-debugging:
+Install the system packages needed for WiFi management, the screen session, SQLite inspection and I2C debugging:
 
 ```bash
 sudo apt update
