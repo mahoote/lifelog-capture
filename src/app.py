@@ -45,8 +45,6 @@ class LifelogApp:
 
         # Initialize GPIOS
         led_off()
-        pgood = Button(config.PGOOD_PIN, pull_up=True)
-        chg = Button(config.CHG_PIN, pull_up=True)
 
         ## Create events
         self.stop_system_event = threading.Event()
@@ -80,7 +78,7 @@ class LifelogApp:
             capture_mode_event=self.capture_mode_event
         )
         self.transfer_service = TransferService()
-        self.power_service = PowerService(pgood=pgood, chg=chg, capture_mode_event=self.capture_mode_event,
+        self.power_service = PowerService(capture_mode_event=self.capture_mode_event,
                                           stop_system_event=self.stop_system_event)
 
         self.mode_state_machine = ModeStateMachine(
