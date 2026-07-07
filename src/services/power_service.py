@@ -1,5 +1,8 @@
+import logging
 import threading
 from gpiozero import Button
+
+logger = logging.getLogger(__name__)
 
 
 class PowerService:
@@ -37,17 +40,21 @@ class PowerService:
 
     def _run_power_monitor(self):
         """
-        Monitor the battery charging state and print messages when it changes.
+        Monitor the battery charging state and log messages when it changes.
         """
+        logger.info("Starting power monitor")
+        logger.debug("Initial battery charging status: %s", self._is_battery_charging())
         previous_charging = False
 
         while not self.stop_system_event.is_set():
+            logger.debug("Checking battery charging status %s", self._is_battery_charging())
+
             if self._is_battery_charging() and not previous_charging:
-                print("Battery is charging")
+                logger.info("Battery is charging")
                 self.capture_mode_event.clear()
                 previous_charging = True
             elif not self._is_battery_charging() and previous_charging:
-                print("Battery is not charging")
+                logger.info("Battery is not charging")
                 self.capture_mode_event.set()
                 previous_charging = False
 
