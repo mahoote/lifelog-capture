@@ -42,6 +42,17 @@ class LifelogApp:
     def __init__(self, config: AppConfig):
         self.config = config
 
+        # Initialize GPIOS
+        led_off()
+        pgood = Button(config.PGOOD_PIN, pull_up=True)
+        chg = Button(config.CHG_PIN, pull_up=True)
+
+        if pgood.is_pressed:
+            print("USB-C / external input present")
+
+        if chg.is_pressed:
+            print("Battery is charging")
+
         ## Create events
         self.stop_system_event = threading.Event()
         self.capture_mode_event = threading.Event()
@@ -84,17 +95,6 @@ class LifelogApp:
 
         ## Create threads
         self.mode_state_machine_thread = self._create_mode_state_machine_thread()
-
-        # Initialize GPIOS
-        led_off()
-        pgood = Button(config.PGOOD_PIN, pull_up=True)
-        chg = Button(config.CHG_PIN, pull_up=True)
-
-        if pgood.is_pressed:
-            print("USB-C / external input present")
-
-        if chg.is_pressed:
-            print("Battery is charging")
 
     def start(self) -> None:
         """Start workers and attach button callbacks."""
