@@ -78,8 +78,10 @@ class LifelogApp:
             capture_mode_event=self.capture_mode_event
         )
         self.transfer_service = TransferService()
-        self.power_service = PowerService(capture_mode_event=self.capture_mode_event,
-                                          stop_system_event=self.stop_system_event)
+        self.power_service = PowerService(
+            config=self.config,
+            capture_mode_event=self.capture_mode_event,
+            stop_system_event=self.stop_system_event)
 
         self.mode_state_machine = ModeStateMachine(
             capture_mode_event=self.capture_mode_event,
