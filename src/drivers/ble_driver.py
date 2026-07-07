@@ -16,6 +16,7 @@ Raspberry Pi needs a lower level BlueZ implementation.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass
 import logging
@@ -70,7 +71,9 @@ class BleDriver:
     async def start(self, characteristics: list[BleCharacteristicConfig]) -> None:
         """Create the Bless server, add the GATT service and start advertising."""
 
-        self.server = BlessServer(name=self.device_name)
+        loop = asyncio.get_running_loop()
+        
+        self.server = BlessServer(name=self.device_name, loop=loop)
         self.server.read_request_func = self._handle_read
         self.server.write_request_func = self._handle_write
 
