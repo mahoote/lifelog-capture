@@ -36,8 +36,10 @@ def led_blink(on_period_s: float = 1.0, off_period_s: float = 1.0):
 
 
 def led_on():
+    print("LED ON")
     led.value = LED_BRIGHTNESS
 
 
 def led_off():
+    print("LED OFF")
     led.off()
