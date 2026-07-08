@@ -5,7 +5,7 @@ import threading
 
 import uvicorn
 
-from src.config import HTTP_HOST, HTTP_PORT
+from src.configs.config import HTTP_HOST, HTTP_PORT
 from src.services.http_server import app as http_app
 from src.services.wifi_service import WifiService
 

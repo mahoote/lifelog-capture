@@ -17,7 +17,7 @@ except Exception as exc:  # Allows parent code to inspect camera availability.
 else:
     PICAMERA_IMPORT_ERROR = None
 
-from src.config import PHOTO_SIZE, VIDEO_SIZE
+from src.configs.config import PHOTO_SIZE, VIDEO_SIZE
 
 
 def _timestamp_name() -> str:

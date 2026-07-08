@@ -1,6 +1,6 @@
 import sqlite3
 
-from src.config import DATA_DIR, DATABASE_PATH
+from src.configs.config import DATA_DIR, DATABASE_PATH
 from src.mappers.footage_item_mapper import row_to_footage_item
 from src.types.footage_item import FootageItem, FootageState, FootageItemInsert
 

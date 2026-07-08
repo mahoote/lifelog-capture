@@ -25,7 +25,7 @@ from src.services.mode_state_machine import ModeStateMachine
 from src.services.motion_service import MotionService
 from src.utils.led_utils import led_off
 from src.workers.motion_worker import MotionWorker
-from src.config import AppConfig
+from src.configs.config import AppConfig
 
 
 class LifelogApp:

@@ -2,7 +2,7 @@ import logging
 import threading
 from gpiozero import Button
 
-from src.config import PowerConfig
+from src.configs.config import PowerConfig
 
 logger = logging.getLogger(__name__)
 

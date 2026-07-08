@@ -9,10 +9,10 @@ from src.services.log_service import LogService
 from src.services.motion_service import MotionService
 from src.workers.motion_worker import MotionWorker
 from src.types.motion_state import MotionState
-from src.config import (DEFAULT_CAPTURE_INTERVAL_SECONDS,
-                        IDLE_CAPTURE_INTERVAL_SECONDS,
-                        VIDEO_CAPTURE_INTERVAL_SECONDS,
-                        VIDEO_DURATION_SECONDS)
+from src.configs.config import (DEFAULT_CAPTURE_INTERVAL_SECONDS,
+                                IDLE_CAPTURE_INTERVAL_SECONDS,
+                                VIDEO_CAPTURE_INTERVAL_SECONDS,
+                                VIDEO_DURATION_SECONDS)
 from src.utils.utils import wait_for_next_capture
 
 
