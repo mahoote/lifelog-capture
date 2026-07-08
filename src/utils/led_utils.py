@@ -21,7 +21,7 @@ def led_blink_loop(stop_event: threading.Event, on_period_s: float = 1.0, off_pe
     """
     while not stop_event.is_set():
         led_blink(on_period_s, off_period_s)
-    led.off()
+    led_off()
 
 
 def led_blink(on_period_s: float = 1.0, off_period_s: float = 1.0):
@@ -29,9 +29,9 @@ def led_blink(on_period_s: float = 1.0, off_period_s: float = 1.0):
     Turn on and off the LED connected to GPIO pin 4.
     The LED will be turned on for 1 second and then turned off for 1 second.
     """
-    led.value = LED_BRIGHTNESS
+    led_on()
     time.sleep(on_period_s)
-    led.off()
+    led_off()
     time.sleep(off_period_s)
 
 
