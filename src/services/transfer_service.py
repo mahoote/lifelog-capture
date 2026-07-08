@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import logging
 import threading
+from time import sleep
 
 import uvicorn
 
 from src.configs.config import HTTP_HOST, HTTP_PORT
 from src.services.http_server import app as http_app
 from src.services.wifi_service import WifiService
+from src.utils.led_utils import led_blink_amount, led_off
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +32,7 @@ class TransferService:
         self._http_server: uvicorn.Server | None = None
         self._http_thread: threading.Thread | None = None
         self._monitor_thread: threading.Thread | None = None
+        self._led_blink_thread: threading.Thread | None = None
         self._stop_event = threading.Event()
 
     def start(self) -> None:
@@ -39,12 +42,19 @@ class TransferService:
         self._stop_event.clear()
         self._start_http_server()
 
+        self._led_blink_thread = threading.Thread(
+            target=self._led_blink_loop,
+            name="transfer-led-blink",
+            daemon=True, )
+        self._led_blink_thread.start()
+
     def stop(self) -> None:
         """Stop HTTP."""
         logger.info("Stopping transfer mode")
 
         self._stop_event.set()
         self._stop_http_server()
+        self._led_blink_thread.join(timeout=1)
 
     def _start_http_server(self) -> None:
         """Start the FastAPI HTTP server in a background thread."""
@@ -75,3 +85,12 @@ class TransferService:
         if self._http_thread is not None:
             self._http_thread.join(timeout=3)
             logger.info("Stopped HTTP server")
+
+    def _led_blink_loop(self):
+        """Blink the LED while the stop event is not set."""
+
+        while not self._stop_event.is_set():
+            led_blink_amount(4, 0.05, 0.05)
+            sleep(2)
+
+        led_off()
