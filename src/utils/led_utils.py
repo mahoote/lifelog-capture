@@ -7,6 +7,14 @@ led = PWMLED(LED_GPIO)
 LED_BRIGHTNESS = 0.3
 
 
+def led_four_blink(on_period_s: float = 0.1, off_period_s: float = 0.1):
+    """
+    Blink the LED four times.
+    """
+    for _ in range(4):
+        led_blink(on_period_s, off_period_s)
+
+
 def led_blink_loop(stop_event: threading.Event, on_period_s: float = 1.0, off_period_s: float = 1.0):
     """
     While the stop event is not set, blink the LED.
