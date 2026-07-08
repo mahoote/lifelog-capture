@@ -12,7 +12,6 @@ main.py should stay small. This file owns the setup order:
 from __future__ import annotations
 
 import threading
-from dataclasses import dataclass
 from signal import pause
 from gpiozero import Button
 
@@ -26,22 +25,12 @@ from src.services.mode_state_machine import ModeStateMachine
 from src.services.motion_service import MotionService
 from src.utils.led_utils import led_off
 from src.workers.motion_worker import MotionWorker
-
-
-@dataclass(frozen=True)
-class AppConfig:
-    PGOOD_PIN: int = 22
-    BUTTON_PIN: int = 26
-    CHG_PIN: int = 27
-    BMI160_ADDRESS: int = 0x69
-    BUTTON_BOUNCE_TIME_S: float = 0.05
-    BUTTON_HOLD_TIME_S: float = 3.0
-    LOGS_DIR: str = "logs"
+from src.config import AppConfig
 
 
 class LifelogApp:
-    def __init__(self, config: AppConfig):
-        self.config = config
+    def __init__(self):
+        self.config = AppConfig()
 
         # Initialize GPIOS
         led_off()
@@ -54,7 +43,7 @@ class LifelogApp:
         self.capture_mode_event.set()
 
         ## Instantiate services and drivers
-        self.imu = BMI160Driver(address=config.BMI160_ADDRESS)
+        self.imu = BMI160Driver(address=self.config.BMI160_ADDRESS)
         self.motion_service = MotionService(self.imu)
         self.motion_worker = MotionWorker(
             imu=self.imu,
@@ -63,7 +52,7 @@ class LifelogApp:
 
         self.log_service = LogService(
             motion_service=self.motion_service,
-            logs_dir=config.LOGS_DIR,
+            logs_dir=self.config.LOGS_DIR,
         )
 
         # Set the motion service listener
@@ -79,7 +68,6 @@ class LifelogApp:
         )
         self.transfer_service = TransferService()
         self.power_service = PowerService(
-            config=self.config,
             capture_mode_event=self.capture_mode_event,
             stop_system_event=self.stop_system_event)
 

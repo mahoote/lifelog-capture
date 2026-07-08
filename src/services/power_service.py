@@ -2,21 +2,22 @@ import logging
 import threading
 from gpiozero import Button
 
-from src.app import AppConfig
+from src.config import PowerConfig
 
 logger = logging.getLogger(__name__)
 
 
 class PowerService:
     def __init__(self,
-                 config: AppConfig,
                  capture_mode_event: threading.Event,
                  stop_system_event: threading.Event):
+        self.config = PowerConfig()
         self.capture_mode_event = capture_mode_event
         self.stop_system_event = stop_system_event
+        
         self._power_thread: threading.Thread | None = None
-        self._pgood = Button(config.PGOOD_PIN, pull_up=True)
-        self._chg = Button(config.CHG_PIN, pull_up=True)
+        self._pgood = Button(self.config.PGOOD_PIN, pull_up=True)
+        self._chg = Button(self.config.CHG_PIN, pull_up=True)
 
     def run_power_monitor(self):
         """

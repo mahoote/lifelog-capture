@@ -1,6 +1,6 @@
 import logging
 
-from src.app import AppConfig, LifelogApp
+from src.app import LifelogApp
 from src.database import init_database
 
 
@@ -20,7 +20,7 @@ def main() -> None:
     configure_logging()
     init_database()
 
-    app = LifelogApp(AppConfig())
+    app = LifelogApp()
 
     try:
         app.start()
