@@ -7,11 +7,14 @@ MotionDetector logic.
 
 from __future__ import annotations
 
+import logging
 import threading
 from time import sleep
 
 from src.drivers.bmi160_driver import BMI160Driver
 from src.services.motion_service import MotionService
+
+logger = logging.getLogger(__name__)
 
 
 class MotionWorker:
@@ -30,6 +33,8 @@ class MotionWorker:
         Other parts of the app can read detector.state. They should not call
         detector.update() themselves, because this worker owns the update loop.
         """
+        logger.info("Starting motion service")
+
         self.imu.start()
         try:
             self.detector.calibrate_idle()
@@ -38,4 +43,5 @@ class MotionWorker:
                 self.detector.update()
                 sleep(self.detector.sample_interval_s)
         finally:
+            logger.info("Stopping motion service")
             self.imu.close()

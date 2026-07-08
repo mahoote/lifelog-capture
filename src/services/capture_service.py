@@ -9,11 +9,13 @@ from src.services.log_service import LogService
 from src.services.motion_service import MotionService
 from src.workers.motion_worker import MotionWorker
 from src.types.motion_state import MotionState
-from src.config import (DEFAULT_CAPTURE_INTERVAL_SECONDS,
-                        IDLE_CAPTURE_INTERVAL_SECONDS,
-                        VIDEO_CAPTURE_INTERVAL_SECONDS,
-                        VIDEO_DURATION_SECONDS)
+from src.configs.config import (DEFAULT_CAPTURE_INTERVAL_SECONDS,
+                                IDLE_CAPTURE_INTERVAL_SECONDS,
+                                VIDEO_CAPTURE_INTERVAL_SECONDS,
+                                VIDEO_DURATION_SECONDS)
 from src.utils.utils import wait_for_next_capture
+
+logger = logging.getLogger(__name__)
 
 
 class CaptureService:
@@ -22,17 +24,24 @@ class CaptureService:
             motion_service: MotionService,
             log_service: LogService,
             motion_worker: MotionWorker,
+            capture_mode_event: threading.Event
     ):
         self.motion_service = motion_service
         self.log_service = log_service
         self.motion_worker = motion_worker
         self._camera = CameraDriver()
+        self._capture_mode_event = capture_mode_event
         self._capture_interval = DEFAULT_CAPTURE_INTERVAL_SECONDS
         self._capture_thread: threading.Thread | None = None
         self._motion_thread: threading.Thread | None = None
         self._stop_capture_event = threading.Event()
 
     def start(self) -> None:
+        if self._camera.camera_error:
+            logger.error(f"Cannot start capture service: {self._camera.camera_error}")
+            self._capture_mode_event.clear()
+            return
+
         if self._capture_thread is not None and self._capture_thread.is_alive():
             return
 
@@ -72,7 +81,7 @@ class CaptureService:
         Run a capture loop until stop is requested.
         Will also detect motion and set the capture interval and mode based on it.
         """
-        logging.info("Starting capture mode")
+        logger.info("Starting capture mode")
 
         camera_started = False
         errored = False
@@ -105,10 +114,10 @@ class CaptureService:
 
         except Exception as e:
             errored = True
-            logging.error(f"Error running capture logic: {e}")
+            logger.error(f"Error running capture logic: {e}")
 
         finally:
-            logging.info("Stopping capture mode")
+            logger.info("Stopping capture mode")
             led_off()
 
             if camera_started:
@@ -126,7 +135,7 @@ class CaptureService:
         Captures a photo and saves it to the storage.
         """
         footage_path = self._camera.capture_jpeg()
-        logging.info(f"Captured photo: {footage_path}")
+        logger.info(f"Captured photo: {footage_path}")
 
         self.log_service.record_footage_taken()
 
@@ -162,7 +171,7 @@ class CaptureService:
 
         try:
             footage_path, capture_end_at = self._camera.capture_video(VIDEO_DURATION_SECONDS)
-            logging.info(f"Captured video: {footage_path}")
+            logger.info(f"Captured video: {footage_path}")
             self.log_service.record_footage_taken()
 
             storage_service.write_item(

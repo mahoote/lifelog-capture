@@ -12,10 +12,10 @@ main.py should stay small. This file owns the setup order:
 from __future__ import annotations
 
 import threading
-from dataclasses import dataclass
 from signal import pause
 from gpiozero import Button
 
+from src.services.power_service import PowerService
 from src.services.transfer_service import TransferService
 from src.utils.button_utils import create_button_handlers
 from src.services.capture_service import CaptureService
@@ -23,21 +23,17 @@ from src.drivers.bmi160_driver import BMI160Driver
 from src.services.log_service import LogService
 from src.services.mode_state_machine import ModeStateMachine
 from src.services.motion_service import MotionService
+from src.utils.led_utils import led_off
 from src.workers.motion_worker import MotionWorker
-
-
-@dataclass(frozen=True)
-class AppConfig:
-    button_gpio: int = 26
-    bmi160_address: int = 0x69
-    button_bounce_time_s: float = 0.05
-    button_hold_time_s: float = 3.0
-    logs_dir: str = "logs"
+from src.configs.config import AppConfig
 
 
 class LifelogApp:
-    def __init__(self, config: AppConfig):
-        self.config = config
+    def __init__(self):
+        self.config = AppConfig()
+
+        # Initialize GPIOS
+        led_off()
 
         ## Create events
         self.stop_system_event = threading.Event()
@@ -47,7 +43,7 @@ class LifelogApp:
         self.capture_mode_event.set()
 
         ## Instantiate services and drivers
-        self.imu = BMI160Driver(address=config.bmi160_address)
+        self.imu = BMI160Driver(address=self.config.BMI160_ADDRESS)
         self.motion_service = MotionService(self.imu)
         self.motion_worker = MotionWorker(
             imu=self.imu,
@@ -56,7 +52,7 @@ class LifelogApp:
 
         self.log_service = LogService(
             motion_service=self.motion_service,
-            logs_dir=config.logs_dir,
+            logs_dir=self.config.LOGS_DIR,
         )
 
         # Set the motion service listener
@@ -68,8 +64,12 @@ class LifelogApp:
             motion_service=self.motion_service,
             log_service=self.log_service,
             motion_worker=self.motion_worker,
+            capture_mode_event=self.capture_mode_event
         )
         self.transfer_service = TransferService()
+        self.power_service = PowerService(
+            capture_mode_event=self.capture_mode_event,
+            stop_system_event=self.stop_system_event)
 
         self.mode_state_machine = ModeStateMachine(
             capture_mode_event=self.capture_mode_event,
@@ -85,6 +85,7 @@ class LifelogApp:
     def start(self) -> None:
         """Start workers and attach button callbacks."""
         self.mode_state_machine_thread.start()
+        self.power_service.run_power_monitor()
         self._bind_button_handlers()
 
     def wait(self) -> None:
@@ -94,16 +95,17 @@ class LifelogApp:
     def stop(self) -> None:
         """Ask threads to stop and clean up hardware resources."""
         self.stop_system_event.set()
+        self.power_service.stop_power_monitor()
         self.mode_state_machine_thread.join(timeout=2)
         self.capture_service.stop()
         self.imu.close()
 
     def _create_button(self) -> Button:
         return Button(
-            self.config.button_gpio,
+            self.config.BUTTON_PIN,
             pull_up=True,
-            bounce_time=self.config.button_bounce_time_s,
-            hold_time=self.config.button_hold_time_s,
+            bounce_time=self.config.BUTTON_BOUNCE_TIME_S,
+            hold_time=self.config.BUTTON_HOLD_TIME_S,
         )
 
     def _create_mode_state_machine_thread(self) -> threading.Thread:

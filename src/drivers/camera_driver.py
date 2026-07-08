@@ -1,15 +1,23 @@
 from __future__ import annotations
 
-from libcamera import Transform
-from picamera2 import Picamera2
-from picamera2.encoders import H264Encoder
 from datetime import datetime, timezone
 from pathlib import Path
 from time import sleep
 from typing import Literal
 
-from src.config import PHOTO_SIZE, VIDEO_SIZE
-from src.types.motion_state import MotionState
+try:
+    from libcamera import Transform
+    from picamera2 import Picamera2
+    from picamera2.encoders import H264Encoder
+except Exception as exc:  # Allows parent code to inspect camera availability.
+    Transform = None  # type: ignore[assignment]
+    Picamera2 = None  # type: ignore[assignment]
+    H264Encoder = None  # type: ignore[assignment]
+    PICAMERA_IMPORT_ERROR = exc
+else:
+    PICAMERA_IMPORT_ERROR = None
+
+from src.configs.config import PHOTO_SIZE, VIDEO_SIZE
 
 
 def _timestamp_name() -> str:
@@ -29,24 +37,38 @@ class CameraDriver:
             self.photo_config: Configuration used for still photos.
             self.video_config: Configuration used for video recording.
         """
-        self.picam2: Picamera2 = Picamera2()
-        self.camera_transform = Transform(hflip=1, vflip=1)
+        self.camera_available = False
+        self.camera_error: str | None = None
+        self.picam2: Picamera2 | None = None
+        self.camera_transform = None
+        self.photo_config: dict | None = None
+        self.video_config: dict | None = None
 
-        self.photo_config: dict = self.picam2.create_still_configuration(
-            main={"size": PHOTO_SIZE},
-            transform=self.camera_transform,
-        )
+        if PICAMERA_IMPORT_ERROR is not None:
+            self.camera_error = str(PICAMERA_IMPORT_ERROR)
+        else:
+            try:
+                self.picam2 = Picamera2()
+                self.camera_transform = Transform(hflip=1, vflip=1)
 
-        self.video_config: dict = self.picam2.create_video_configuration(
-            main={"size": VIDEO_SIZE},
-            transform=self.camera_transform,
-        )
+                self.photo_config = self.picam2.create_still_configuration(
+                    main={"size": PHOTO_SIZE},
+                    transform=self.camera_transform,
+                )
+
+                self.video_config = self.picam2.create_video_configuration(
+                    main={"size": VIDEO_SIZE},
+                    transform=self.camera_transform,
+                )
+            except Exception as exc:
+                self.camera_error = str(exc)
+                self.picam2 = None
 
         self.footage_dir = Path(footage_dir)
         self.footage_dir.mkdir(parents=True, exist_ok=True)
         self.current_mode: Literal["photo", "video"] | None = None
 
-    def start_camera(self) -> None:
+    def start_camera(self) -> bool:
         """
         Configure and start the camera.
 
@@ -54,12 +76,28 @@ class CameraDriver:
         and becomes ready for capturing photos or recording videos.
 
         Returns:
-            None
+            bool: True if the camera started, False otherwise.
         """
-        self.picam2.configure(self.photo_config)
-        self.picam2.start()
+        if self.picam2 is None or self.photo_config is None:
+            self.camera_available = False
+            if self.camera_error is None:
+                self.camera_error = "Camera is not initialized."
+            return False
+
+        try:
+            self.picam2.configure(self.photo_config)
+            self.picam2.start()
+        except Exception as exc:
+            self.camera_available = False
+            self.camera_error = str(exc)
+            self.current_mode = None
+            return False
+
+        self.camera_available = True
+        self.camera_error = None
         self.current_mode = "photo"
         sleep(1)
+        return True
 
     def capture_jpeg(self) -> Path:
         """
@@ -75,15 +113,13 @@ class CameraDriver:
         """
         out_path = self.footage_dir / f"{_timestamp_name()}.jpeg"
 
+        self._ensure_camera_available()
         self._switch_mode("photo")
         self.picam2.capture_file(
             str(out_path),
             format="jpeg",
         )
         return out_path
-
-    from datetime import datetime, timezone
-    from pathlib import Path
 
     def capture_video(
             self,
@@ -106,6 +142,7 @@ class CameraDriver:
         """
         out_path = self.footage_dir / f"{_timestamp_name()}.h264"
 
+        self._ensure_camera_available()
         encoder = H264Encoder()
         self._switch_mode("video")
 
@@ -121,12 +158,19 @@ class CameraDriver:
         """
         Stop the camera and release camera resources.
         """
+        if self.picam2 is None or not self.camera_available:
+            return
+
         self.picam2.stop()
+        self.camera_available = False
+        self.current_mode = None
 
     def _switch_mode(self, mode: Literal["photo", "video"]) -> None:
         """
         Switch camera mode only if the requested mode is not active.
         """
+        self._ensure_camera_available()
+
         if self.current_mode == mode:
             return
 
@@ -136,3 +180,11 @@ class CameraDriver:
             self.picam2.switch_mode(self.video_config)
 
         self.current_mode = mode
+
+    def _ensure_camera_available(self) -> None:
+        """
+        Raise a clear error if the camera is not available.
+        """
+        if self.picam2 is None or not self.camera_available:
+            error = self.camera_error or "Camera is not available."
+            raise RuntimeError(error)

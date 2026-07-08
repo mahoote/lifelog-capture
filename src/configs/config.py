@@ -1,4 +1,5 @@
 from pathlib import Path
+from dataclasses import dataclass
 
 """
 Project configuration.
@@ -27,3 +28,18 @@ PHOTO_SIZE = (1920, 1080)
 
 # Video recording resolution.
 VIDEO_SIZE = (1280, 720)
+
+
+@dataclass(frozen=True)
+class PowerConfig:
+    PGOOD_PIN: int = 22
+    CHG_PIN: int = 27
+
+
+@dataclass(frozen=True)
+class AppConfig:
+    BUTTON_PIN: int = 26
+    BMI160_ADDRESS: int = 0x69
+    BUTTON_BOUNCE_TIME_S: float = 0.05
+    BUTTON_HOLD_TIME_S: float = 3.0
+    LOGS_DIR: str = "logs"

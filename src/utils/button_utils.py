@@ -1,16 +1,19 @@
+import logging
 import threading
 from collections.abc import Callable
 
 from src.utils.utils import shutdown_pi
 
+logger = logging.getLogger(__name__)
+
 
 def toggle_capture_mode(capture_mode_event: threading.Event) -> None:
     """Toggle between capture mode and transfer mode."""
     if capture_mode_event.is_set():
-        print("Switching to transfer mode")
+        logger.info("Manual switching to transfer mode")
         capture_mode_event.clear()
     else:
-        print("Switching to capture mode")
+        logger.info("Manual switching to capture mode")
         capture_mode_event.set()
 
 
@@ -31,7 +34,7 @@ def create_button_handlers(
 
     def handle_long_press() -> None:
         """Handle a long button press."""
-        print("Long press detected, shutting down")
+        logger.info("Long press detected, shutting down")
         button_state["long_press_handled"] = True
         shutdown_pi(stop_system_event, managed_thread)
 
@@ -41,7 +44,6 @@ def create_button_handlers(
             button_state["long_press_handled"] = False
             return
 
-        print("Short press detected")
         toggle_capture_mode(capture_mode_event)
 
     return handle_long_press, handle_button_release
