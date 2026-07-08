@@ -90,7 +90,7 @@ class TransferService:
         """Blink the LED while the stop event is not set."""
 
         while not self._stop_event.is_set():
-            led_four_blink(0.2, 0.2)
-            sleep(1)
+            led_four_blink(0.1, 0.1)
+            sleep(0.5)
 
         led_off()
