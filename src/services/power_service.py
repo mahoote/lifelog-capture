@@ -59,6 +59,8 @@ class PowerService:
                 self.capture_mode_event.set()
                 previous_charging = False
 
+        logger.info("Stopping power monitor")
+
     def _is_battery_charging(self) -> bool:
         """
         Both the CHG and PGOOD pins must be high for the battery to be considered charging.

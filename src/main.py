@@ -1,19 +1,8 @@
 import logging
 
 from src.app import LifelogApp
+from src.configs.logging_config import configure_logging
 from src.database import init_database
-
-
-def configure_logging() -> None:
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-        handlers=[
-            logging.StreamHandler(),
-            logging.FileHandler("lifelog.log"),
-        ],
-    )
-    logging.getLogger().setLevel(logging.DEBUG)
 
 
 def main() -> None:

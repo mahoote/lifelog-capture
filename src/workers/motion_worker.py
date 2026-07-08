@@ -43,4 +43,5 @@ class MotionWorker:
                 self.detector.update()
                 sleep(self.detector.sample_interval_s)
         finally:
+            logger.info("Stopping motion service")
             self.imu.close()
