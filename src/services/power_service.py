@@ -23,7 +23,7 @@ class PowerService:
         """
         Runs the power monitor in a separate thread. If the thread is already running, it does nothing.
         """
-        logger.debug("Starting power monitor")
+        logger.info("Starting power monitor")
 
         if self._power_thread is not None and self._power_thread.is_alive():
             return
@@ -47,13 +47,9 @@ class PowerService:
         """
         Monitor the battery charging state and log messages when it changes.
         """
-        logger.info("Inside power monitor thread")
-        logger.debug("Initial battery charging status: %s", self._is_battery_charging())
         previous_charging = False
 
         while not self.stop_system_event.is_set():
-            logger.debug("Checking battery charging status %s", self._is_battery_charging())
-
             if self._is_battery_charging() and not previous_charging:
                 logger.info("Battery is charging")
                 self.capture_mode_event.clear()
