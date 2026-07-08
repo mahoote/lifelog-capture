@@ -15,6 +15,8 @@ from src.configs.config import (DEFAULT_CAPTURE_INTERVAL_SECONDS,
                                 VIDEO_DURATION_SECONDS)
 from src.utils.utils import wait_for_next_capture
 
+logger = logging.getLogger(__name__)
+
 
 class CaptureService:
     def __init__(
@@ -36,7 +38,7 @@ class CaptureService:
 
     def start(self) -> None:
         if self._camera.camera_error:
-            logging.error(f"Cannot start capture service: {self._camera.camera_error}")
+            logger.error(f"Cannot start capture service: {self._camera.camera_error}")
             self._capture_mode_event.clear()
             return
 
@@ -79,7 +81,7 @@ class CaptureService:
         Run a capture loop until stop is requested.
         Will also detect motion and set the capture interval and mode based on it.
         """
-        logging.info("Starting capture mode")
+        logger.info("Starting capture mode")
 
         camera_started = False
         errored = False
@@ -112,10 +114,10 @@ class CaptureService:
 
         except Exception as e:
             errored = True
-            logging.error(f"Error running capture logic: {e}")
+            logger.error(f"Error running capture logic: {e}")
 
         finally:
-            logging.info("Stopping capture mode")
+            logger.info("Stopping capture mode")
             led_off()
 
             if camera_started:
@@ -133,7 +135,7 @@ class CaptureService:
         Captures a photo and saves it to the storage.
         """
         footage_path = self._camera.capture_jpeg()
-        logging.info(f"Captured photo: {footage_path}")
+        logger.info(f"Captured photo: {footage_path}")
 
         self.log_service.record_footage_taken()
 
@@ -169,7 +171,7 @@ class CaptureService:
 
         try:
             footage_path, capture_end_at = self._camera.capture_video(VIDEO_DURATION_SECONDS)
-            logging.info(f"Captured video: {footage_path}")
+            logger.info(f"Captured video: {footage_path}")
             self.log_service.record_footage_taken()
 
             storage_service.write_item(
