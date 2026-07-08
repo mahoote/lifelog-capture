@@ -91,6 +91,6 @@ class TransferService:
 
         while not self._stop_event.is_set():
             led_blink_amount(4, 0.05, 0.05)
-            sleep(0.5)
+            sleep(2)
 
         led_off()
