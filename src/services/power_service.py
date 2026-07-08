@@ -35,7 +35,7 @@ class PowerService:
         )
         self._power_thread.start()
 
-    def _stop_power_monitor(self):
+    def stop_power_monitor(self):
         """
         Stops the power monitor thread.
         """
@@ -58,8 +58,6 @@ class PowerService:
                 logger.info("Battery is not charging")
                 self.capture_mode_event.set()
                 previous_charging = False
-
-        self._stop_power_monitor()
 
     def _is_battery_charging(self) -> bool:
         """

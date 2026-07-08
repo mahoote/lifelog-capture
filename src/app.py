@@ -95,6 +95,7 @@ class LifelogApp:
     def stop(self) -> None:
         """Ask threads to stop and clean up hardware resources."""
         self.stop_system_event.set()
+        self.power_service.stop_power_monitor()
         self.mode_state_machine_thread.join(timeout=2)
         self.capture_service.stop()
         self.imu.close()
