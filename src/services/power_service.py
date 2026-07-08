@@ -40,7 +40,7 @@ class PowerService:
         Stops the power monitor thread.
         """
         if self._power_thread is not None and self._power_thread.is_alive():
-            self._power_thread.join()
+            self._power_thread.join(timeout=2)
             self._power_thread = None
 
     def _run_power_monitor(self):
