@@ -14,7 +14,7 @@ class PowerService:
         self.config = PowerConfig()
         self.capture_mode_event = capture_mode_event
         self.stop_system_event = stop_system_event
-        
+
         self._power_thread: threading.Thread | None = None
         self._pgood = Button(self.config.PGOOD_PIN, pull_up=True)
         self._chg = Button(self.config.CHG_PIN, pull_up=True)
@@ -33,6 +33,7 @@ class PowerService:
             name="power-monitor",
             daemon=True,
         )
+        self._power_thread.start()
 
     def _stop_power_monitor(self):
         """
