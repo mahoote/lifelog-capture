@@ -7,11 +7,11 @@ led = PWMLED(LED_GPIO)
 LED_BRIGHTNESS = 0.3
 
 
-def led_four_blink(on_period_s: float = 0.1, off_period_s: float = 0.1):
+def led_blink_amount(amount: int, on_period_s: float = 0.1, off_period_s: float = 0.1):
     """
-    Blink the LED four times.
+    Blink the LED x number of times.
     """
-    for _ in range(4):
+    for _ in range(amount):
         led_blink(on_period_s, off_period_s)
 
 
