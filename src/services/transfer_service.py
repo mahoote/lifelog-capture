@@ -69,6 +69,7 @@ class TransferService:
         logger.info("Stopping transfer mode")
 
         self._stop_transfer_event.set()
+        self._transfer_status = TransferBlinkStatus.STARTING
         self._stop_http_server()
 
         if self._transfer_thread is not None:
