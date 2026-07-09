@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import socket
 import threading
 from time import sleep
 
@@ -10,7 +9,8 @@ import uvicorn
 from src.configs.config import HTTP_HOST, HTTP_PORT
 from src.services.http_server import app as http_app
 from src.services.wifi_service import WifiService
-from src.utils.led_utils import led_blink_amount, led_off
+from src.utils.internet_utils import has_internet_connection
+from src.utils.led_utils import led_blink_amount, led_off, led_blink_loop
 
 logger = logging.getLogger(__name__)
 
@@ -34,16 +34,21 @@ class TransferService:
         self._http_thread: threading.Thread | None = None
         self._monitor_thread: threading.Thread | None = None
         self._led_blink_thread: threading.Thread | None = None
-        self._stop_event = threading.Event()
+        self._stop_transfer_event = threading.Event()
 
     def start(self) -> None:
         """Start HTTP and begin monitoring transfer readiness."""
         logger.info("Starting transfer mode")
 
-        self._stop_event.clear()
+        self._stop_transfer_event.clear()
 
-        if not self._has_internet_connection():
-            logger.warning("No internet connection available. Transfer server will not start.")
+        if not has_internet_connection():
+            logger.error("No internet connection available. Transfer server will not start.")
+            led_blink_loop(
+                stop_event=self._stop_transfer_event,
+                on_period_s=0.5,
+                off_period_s=0.5,
+            )
             return
 
         self._start_http_server()
@@ -58,21 +63,11 @@ class TransferService:
         """Stop HTTP."""
         logger.info("Stopping transfer mode")
 
-        self._stop_event.set()
+        self._stop_transfer_event.set()
         self._stop_http_server()
 
         if self._led_blink_thread is not None:
             self._led_blink_thread.join(timeout=1)
-
-    def _has_internet_connection(self) -> bool:
-        """Return True if the Pi can reach the internet."""
-
-        try:
-            with socket.create_connection(("1.1.1.1", 53), timeout=3):
-                return True
-        except OSError as exc:
-            logger.info("Internet connection check failed: %s", exc)
-            return False
 
     def _start_http_server(self) -> None:
         """Start the FastAPI HTTP server in a background thread."""
@@ -107,7 +102,7 @@ class TransferService:
     def _led_blink_loop(self):
         """Blink the LED while the stop event is not set."""
 
-        while not self._stop_event.is_set():
+        while not self._stop_transfer_event.is_set():
             led_blink_amount(4, 0.05, 0.05)
             sleep(2)
 
