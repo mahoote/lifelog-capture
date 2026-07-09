@@ -36,18 +36,20 @@ class TransferService:
         self._stop_transfer_event = threading.Event()
 
     def start(self) -> None:
-        self._transfer_thread = threading.Thread(
-            target=self._run_transfer,
-            name="transfer",
-            daemon=True,
-        )
-        self._transfer_thread.start()
+        if self._transfer_thread is None or not self._transfer_thread.is_alive():
+            self._transfer_thread = threading.Thread(
+                target=self._run_transfer,
+                name="transfer",
+                daemon=True,
+            )
+            self._transfer_thread.start()
 
-        self._transfer_blink_thread = threading.Thread(
-            target=self._transfer_blink_loop,
-            name="transfer-led-blink",
-            daemon=True, )
-        self._transfer_blink_thread.start()
+        if self._transfer_blink_thread is None or not self._transfer_blink_thread.is_alive():
+            self._transfer_blink_thread = threading.Thread(
+                target=self._transfer_blink_loop,
+                name="transfer-led-blink",
+                daemon=True, )
+            self._transfer_blink_thread.start()
 
     def stop(self) -> None:
         """Stop HTTP."""
