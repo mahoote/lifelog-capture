@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import threading
+from enum import Enum
 from time import sleep
 
 import uvicorn
@@ -13,6 +14,14 @@ from src.utils.internet_utils import has_internet_connection
 from src.utils.led_utils import led_blink_amount, led_off, led_blink_loop
 
 logger = logging.getLogger(__name__)
+
+
+class TransferBlinkStatus(Enum):
+    """Enum for transfer blink status."""
+
+    STARTING = "starting"
+    RUNNING = "running"
+    NO_INTERNET = "no_internet"
 
 
 class TransferService:
@@ -34,6 +43,7 @@ class TransferService:
         self._transfer_thread: threading.Thread | None = None
         self._transfer_blink_thread: threading.Thread | None = None
         self._stop_transfer_event = threading.Event()
+        self._transfer_status = TransferBlinkStatus.STARTING
 
     def start(self) -> None:
         self._stop_transfer_event.clear()
@@ -49,7 +59,7 @@ class TransferService:
         self._transfer_thread.start()
 
         self._transfer_blink_thread = threading.Thread(
-            target=self._transfer_blink_loop,
+            target=self._transfer_blink_status,
             name="transfer-led-blink",
             daemon=True, )
         self._transfer_blink_thread.start()
@@ -75,12 +85,10 @@ class TransferService:
 
         if not has_internet_connection():
             logger.error("No internet connection available. Transfer server will not start.")
-            led_blink_loop(
-                stop_event=self._stop_transfer_event,
-                on_period_s=0.5,
-                off_period_s=0.5,
-            )
+            self._transfer_status = TransferBlinkStatus.NO_INTERNET
             return
+
+        self._transfer_status = TransferBlinkStatus.RUNNING
 
         self._start_http_server()
 
@@ -101,11 +109,25 @@ class TransferService:
         if self._http_server is not None:
             self._http_server.should_exit = True
 
-    def _transfer_blink_loop(self):
+    def _transfer_blink_status(self):
         """Blink the LED while the stop event is not set."""
 
-        while not self._stop_transfer_event.is_set():
-            led_blink_amount(4, 0.05, 0.05)
-            sleep(2)
+        match self._transfer_status:
+            case "running":
+                while not self._stop_transfer_event.is_set():
+                    led_blink_amount(4, 0.05, 0.05)
+                    sleep(2)
 
-        led_off()
+                led_off()
+            case "no_internet":
+                led_blink_loop(
+                    stop_event=self._stop_transfer_event,
+                    on_period_s=0.5,
+                    off_period_s=0.5,
+                )
+            case _:
+                led_blink_loop(
+                    stop_event=self._stop_transfer_event,
+                    on_period_s=0.05,
+                    off_period_s=0.05,
+                )
