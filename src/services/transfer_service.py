@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import socket
 import threading
 from time import sleep
 
@@ -40,6 +41,11 @@ class TransferService:
         logger.info("Starting transfer mode")
 
         self._stop_event.clear()
+
+        if not self._has_internet_connection():
+            logger.warning("No internet connection available. Transfer server will not start.")
+            return
+
         self._start_http_server()
 
         self._led_blink_thread = threading.Thread(
@@ -54,7 +60,19 @@ class TransferService:
 
         self._stop_event.set()
         self._stop_http_server()
-        self._led_blink_thread.join(timeout=1)
+
+        if self._led_blink_thread is not None:
+            self._led_blink_thread.join(timeout=1)
+
+    def _has_internet_connection(self) -> bool:
+        """Return True if the Pi can reach the internet."""
+
+        try:
+            with socket.create_connection(("1.1.1.1", 53), timeout=3):
+                return True
+        except OSError as exc:
+            logger.info("Internet connection check failed: %s", exc)
+            return False
 
     def _start_http_server(self) -> None:
         """Start the FastAPI HTTP server in a background thread."""
