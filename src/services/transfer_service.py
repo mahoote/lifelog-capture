@@ -31,12 +31,38 @@ class TransferService:
         http_app.state.wifi_service = self.wifi_service
 
         self._http_server: uvicorn.Server | None = None
-        self._http_thread: threading.Thread | None = None
-        self._monitor_thread: threading.Thread | None = None
-        self._led_blink_thread: threading.Thread | None = None
+        self._transfer_thread: threading.Thread | None = None
+        self._transfer_blink_thread: threading.Thread | None = None
         self._stop_transfer_event = threading.Event()
 
     def start(self) -> None:
+        self._transfer_thread = threading.Thread(
+            target=self._run_transfer,
+            name="transfer",
+            daemon=True,
+        )
+        self._transfer_thread.start()
+
+        self._transfer_blink_thread = threading.Thread(
+            target=self._transfer_blink_loop,
+            name="transfer-led-blink",
+            daemon=True, )
+        self._transfer_blink_thread.start()
+
+    def stop(self) -> None:
+        """Stop HTTP."""
+        logger.info("Stopping transfer mode")
+
+        self._stop_transfer_event.set()
+        self._stop_http_server()
+
+        if self._transfer_thread is not None:
+            self._transfer_thread.join(timeout=3)
+
+        if self._transfer_blink_thread is not None:
+            self._transfer_blink_thread.join(timeout=1)
+
+    def _run_transfer(self) -> None:
         """Start HTTP and begin monitoring transfer readiness."""
         logger.info("Starting transfer mode")
 
@@ -53,28 +79,8 @@ class TransferService:
 
         self._start_http_server()
 
-        self._led_blink_thread = threading.Thread(
-            target=self._led_blink_loop,
-            name="transfer-led-blink",
-            daemon=True, )
-        self._led_blink_thread.start()
-
-    def stop(self) -> None:
-        """Stop HTTP."""
-        logger.info("Stopping transfer mode")
-
-        self._stop_transfer_event.set()
-        self._stop_http_server()
-
-        if self._led_blink_thread is not None:
-            self._led_blink_thread.join(timeout=1)
-
     def _start_http_server(self) -> None:
-        """Start the FastAPI HTTP server in a background thread."""
-
-        if self._http_thread is not None and self._http_thread.is_alive():
-            return
-
+        """Start the FastAPI HTTP server."""
         config = uvicorn.Config(
             http_app,
             host=HTTP_HOST,
@@ -82,12 +88,7 @@ class TransferService:
             log_level="info",
         )
         self._http_server = uvicorn.Server(config)
-        self._http_thread = threading.Thread(
-            target=self._http_server.run,
-            name="http-server",
-            daemon=True,
-        )
-        self._http_thread.start()
+        self._http_server.run()
 
     def _stop_http_server(self) -> None:
         """Ask uvicorn to stop and wait briefly for the thread."""
@@ -95,11 +96,7 @@ class TransferService:
         if self._http_server is not None:
             self._http_server.should_exit = True
 
-        if self._http_thread is not None:
-            self._http_thread.join(timeout=3)
-            logger.info("Stopped HTTP server")
-
-    def _led_blink_loop(self):
+    def _transfer_blink_loop(self):
         """Blink the LED while the stop event is not set."""
 
         while not self._stop_transfer_event.is_set():
