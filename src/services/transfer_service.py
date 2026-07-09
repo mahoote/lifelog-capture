@@ -11,7 +11,7 @@ from src.configs.config import HTTP_HOST, HTTP_PORT
 from src.services.http_server import app as http_app
 from src.services.wifi_service import WifiService
 from src.utils.internet_utils import has_internet_connection
-from src.utils.led_utils import led_blink_amount, led_off, led_blink_loop
+from src.utils.led_utils import led_blink_amount, led_off, led_blink_loop, led_blink
 
 logger = logging.getLogger(__name__)
 
@@ -112,22 +112,17 @@ class TransferService:
     def _transfer_blink_status(self):
         """Blink the LED while the stop event is not set."""
 
-        match self._transfer_status:
-            case "running":
-                while not self._stop_transfer_event.is_set():
+        while not self._stop_transfer_event.is_set():
+
+            match self._transfer_status:
+                case TransferBlinkStatus.RUNNING:
+                    led_blink(on_period_s=0.05,
+                              off_period_s=0.05, )
+                    
+                case TransferBlinkStatus.STARTING:
                     led_blink_amount(4, 0.05, 0.05)
                     sleep(2)
 
-                led_off()
-            case "no_internet":
-                led_blink_loop(
-                    stop_event=self._stop_transfer_event,
-                    on_period_s=0.5,
-                    off_period_s=0.5,
-                )
-            case _:
-                led_blink_loop(
-                    stop_event=self._stop_transfer_event,
-                    on_period_s=0.05,
-                    off_period_s=0.05,
-                )
+                case TransferBlinkStatus.NO_INTERNET:
+                    led_blink(on_period_s=0.5,
+                              off_period_s=0.5, )
