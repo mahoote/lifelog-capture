@@ -1,7 +1,8 @@
-/.venv
-/.idea
-__pycache__
+__pycache__/
+.venv/
+.idea/
+footage/
+logs/
+data/
 
-/footage
-/logs
-/data
+lifelog.log
