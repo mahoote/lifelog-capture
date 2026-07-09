@@ -8,7 +8,7 @@ Edit these values to change the capture timing and camera resolutions.
 Sizes are written as (width, height) in pixels.
 """
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = BASE_DIR / "data"
 DATABASE_PATH = DATA_DIR / "lifelog.db"
 
