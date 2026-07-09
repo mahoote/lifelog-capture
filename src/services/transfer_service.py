@@ -36,20 +36,23 @@ class TransferService:
         self._stop_transfer_event = threading.Event()
 
     def start(self) -> None:
-        if self._transfer_thread is None or not self._transfer_thread.is_alive():
-            self._transfer_thread = threading.Thread(
-                target=self._run_transfer,
-                name="transfer",
-                daemon=True,
-            )
-            self._transfer_thread.start()
+        self._stop_transfer_event.clear()
 
-        if self._transfer_blink_thread is None or not self._transfer_blink_thread.is_alive():
-            self._transfer_blink_thread = threading.Thread(
-                target=self._transfer_blink_loop,
-                name="transfer-led-blink",
-                daemon=True, )
-            self._transfer_blink_thread.start()
+        if not self._transfer_thread is None and self._transfer_thread.is_alive():
+            return
+
+        self._transfer_thread = threading.Thread(
+            target=self._run_transfer,
+            name="transfer",
+            daemon=True,
+        )
+        self._transfer_thread.start()
+
+        self._transfer_blink_thread = threading.Thread(
+            target=self._transfer_blink_loop,
+            name="transfer-led-blink",
+            daemon=True, )
+        self._transfer_blink_thread.start()
 
     def stop(self) -> None:
         """Stop HTTP."""
@@ -60,15 +63,15 @@ class TransferService:
 
         if self._transfer_thread is not None:
             self._transfer_thread.join(timeout=3)
+            self._transfer_thread = None
 
         if self._transfer_blink_thread is not None:
             self._transfer_blink_thread.join(timeout=1)
+            self._transfer_blink_thread = None
 
     def _run_transfer(self) -> None:
         """Start HTTP and begin monitoring transfer readiness."""
         logger.info("Starting transfer mode")
-
-        self._stop_transfer_event.clear()
 
         if not has_internet_connection():
             logger.error("No internet connection available. Transfer server will not start.")
