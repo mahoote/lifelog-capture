@@ -115,11 +115,11 @@ class TransferService:
         while not self._stop_transfer_event.is_set():
 
             match self._transfer_status:
-                case TransferBlinkStatus.RUNNING:
+                case TransferBlinkStatus.STARTING:
                     led_blink(on_period_s=0.05,
                               off_period_s=0.05, )
-                    
-                case TransferBlinkStatus.STARTING:
+
+                case TransferBlinkStatus.RUNNING:
                     led_blink_amount(4, 0.05, 0.05)
                     sleep(2)
 
