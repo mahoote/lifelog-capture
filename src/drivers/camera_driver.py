@@ -9,10 +9,12 @@ try:
     from libcamera import Transform
     from picamera2 import Picamera2
     from picamera2.encoders import H264Encoder
+    from picamera2.outputs import FfmpegOutput
 except Exception as exc:  # Allows parent code to inspect camera availability.
     Transform = None  # type: ignore[assignment]
     Picamera2 = None  # type: ignore[assignment]
     H264Encoder = None  # type: ignore[assignment]
+    FfmpegOutput = None  # type: ignore[assignment]
     PICAMERA_IMPORT_ERROR = exc
 else:
     PICAMERA_IMPORT_ERROR = None
@@ -57,7 +59,13 @@ class CameraDriver:
                 )
 
                 self.video_config = self.picam2.create_video_configuration(
-                    main={"size": VIDEO_SIZE},
+                    main={
+                        "size": VIDEO_SIZE,
+                        "format": "YUV420",
+                    },
+                    controls={
+                        "FrameRate": 30,
+                    },
                     transform=self.camera_transform,
                 )
             except Exception as exc:
@@ -140,13 +148,20 @@ class CameraDriver:
                 - Path to the saved video file.
                 - UTC timestamp when recording finished.
         """
-        out_path = self.footage_dir / f"{_timestamp_name()}.h264"
+
+        out_path = self.footage_dir / f"{_timestamp_name()}.mp4"
 
         self._ensure_camera_available()
-        encoder = H264Encoder()
+
         self._switch_mode("video")
 
-        self.picam2.start_recording(encoder, str(out_path))
+        # Let exposure, gain, and buffers settle after switching mode.
+        sleep(2)
+
+        encoder = H264Encoder(bitrate=8_000_000)
+        output = FfmpegOutput(str(out_path))
+
+        self.picam2.start_recording(encoder, output)
         sleep(seconds)
         self.picam2.stop_recording()
 
