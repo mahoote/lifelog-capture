@@ -1,5 +1,6 @@
 import logging
 import threading
+from time import monotonic
 
 from src.drivers.camera_driver import CameraDriver
 from src.services import storage_service
@@ -91,26 +92,35 @@ class CaptureService:
             self._camera.start_camera()
             camera_started = True
 
+            last_capture_at = monotonic() - DEFAULT_CAPTURE_INTERVAL_SECONDS
+
             while not self._stop_capture_event.is_set():
                 led_on()
 
-                match self.motion_service.state:
+                motion_state = self.motion_service.state
+
+                match motion_state:
                     case MotionState.IDLE:
                         self._capture_interval = IDLE_CAPTURE_INTERVAL_SECONDS
-                        self._capture_photo()
                     case MotionState.ACTIVE:
                         self._capture_interval = VIDEO_CAPTURE_INTERVAL_SECONDS
-                        self._capture_video()
                     case _:
                         self._capture_interval = DEFAULT_CAPTURE_INTERVAL_SECONDS
-                        self._capture_photo()
 
-                should_continue = wait_for_next_capture(
+                should_capture = wait_for_next_capture(
                     stop_event=self._stop_capture_event,
                     interval_seconds=self._capture_interval,
+                    last_capture_at=last_capture_at,
                 )
-                if not should_continue:
-                    break
+
+                if should_capture:
+                    match motion_state:
+                        case MotionState.ACTIVE:
+                            self._capture_video()
+                        case _:
+                            self._capture_photo()
+
+                    last_capture_at = monotonic()
 
         except Exception as e:
             errored = True
