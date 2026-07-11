@@ -6,25 +6,23 @@ from time import monotonic
 def wait_for_next_capture(
         stop_event: threading.Event,
         interval_seconds: float,
+        last_capture_at: float,
         check_every: float = 0.25,
 ) -> bool:
     """
-    Wait until the next capture should happen.
+    Wait briefly before checking whether the next capture should happen.
 
     Returns:
-        True if the full interval completed.
-        False if shutdown was requested.
+        True if elapsed time has reached the current interval.
+        False if shutdown was requested or the interval has not elapsed yet.
     """
-    deadline = monotonic() + interval_seconds
+    if stop_event.is_set():
+        return False
 
-    while not stop_event.is_set():
-        remaining = deadline - monotonic()
+    if monotonic() - last_capture_at >= interval_seconds:
+        return True
 
-        if remaining <= 0:
-            return True
-
-        stop_event.wait(timeout=min(check_every, remaining))
-
+    stop_event.wait(timeout=check_every)
     return False
 
 
