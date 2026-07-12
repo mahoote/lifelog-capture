@@ -66,7 +66,7 @@ def download_footage(file_id: str):
 
 
 @app.post("/ack")
-def ack_file(request: AckRequest):
+def handle_ack(request: AckRequest):
     success = storage.update_state(request.file_id, FootageState.ACKED)
 
     if not success:
