@@ -2,7 +2,7 @@ import logging
 import threading
 from collections.abc import Callable
 
-from src.utils.utils import shutdown_pi
+from src.utils.system_utils import shutdown_pi
 
 logger = logging.getLogger(__name__)
 
