@@ -1,62 +1,11 @@
 import subprocess
 import socket
-from dataclasses import dataclass
 
-
-@dataclass
-class WifiStatus:
-    """Current WiFi connection state for the Raspberry Pi."""
-
-    connected: bool
-    ssid: str | None
-    ip: str | None
+from src.types.wifi_status import WifiStatus
 
 
 class WifiService:
-    """Service for scanning, connecting to and reading WiFi state."""
-
-    def scan_networks(self) -> list[str]:
-        """
-        Scan for nearby WiFi networks using NetworkManager.
-
-        Returns:
-            A de-duplicated list of visible SSIDs. Empty SSIDs are ignored.
-        """
-        result = subprocess.run(
-            ["nmcli", "-t", "-f", "SSID", "dev", "wifi", "list"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        ssids = []
-        for line in result.stdout.splitlines():
-            ssid = line.strip()
-            if ssid and ssid not in ssids:
-                ssids.append(ssid)
-
-        return ssids
-
-    def connect(self, ssid: str, password: str) -> bool:
-        """
-        Connect the Raspberry Pi to a WiFi network.
-
-        Args:
-            ssid: The network name to connect to.
-            password: The WiFi password for the selected network.
-
-        Returns:
-            True when NetworkManager reports a successful connection,
-            otherwise False.
-        """
-        result = subprocess.run(
-            ["nmcli", "dev", "wifi", "connect", ssid, "password", password],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        return result.returncode == 0
+    """Service for reading WiFi state."""
 
     def get_status(self) -> WifiStatus:
         """
