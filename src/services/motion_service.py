@@ -107,7 +107,7 @@ class MotionService:
             MotionState.IDLE, MotionState.DEFAULT, or MotionState.ACTIVE.
         """
         sample = self.imu.read_sample()
-        score = self.motion_score(sample)
+        score = self._motion_score(sample)
 
         # Smooth short spikes, but still react quickly enough for walking.
         alpha = 0.30
@@ -160,7 +160,7 @@ class MotionService:
         if self._state_change_listener is not None:
             self._state_change_listener(new_state)
 
-    def motion_score(self, sample: ImuSample) -> float:
+    def _motion_score(self, sample: ImuSample) -> float:
         """
         Convert accelerometer and gyroscope readings into one movement score.
 

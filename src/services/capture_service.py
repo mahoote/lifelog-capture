@@ -14,7 +14,7 @@ from src.configs.config import (DEFAULT_CAPTURE_INTERVAL_SECONDS,
                                 IDLE_CAPTURE_INTERVAL_SECONDS,
                                 VIDEO_CAPTURE_INTERVAL_SECONDS,
                                 VIDEO_DURATION_SECONDS)
-from src.utils.utils import wait_for_next_capture
+from src.utils.system_utils import wait_for_next_capture
 
 logger = logging.getLogger(__name__)
 

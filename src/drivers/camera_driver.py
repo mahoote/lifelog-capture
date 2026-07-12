@@ -5,6 +5,8 @@ from pathlib import Path
 from time import sleep
 from typing import Literal
 
+from src.utils.date_utils import _timestamp_name
+
 try:
     from libcamera import Transform
     from picamera2 import Picamera2
@@ -20,11 +22,6 @@ else:
     PICAMERA_IMPORT_ERROR = None
 
 from src.configs.config import PHOTO_SIZE, VIDEO_SIZE
-
-
-def _timestamp_name() -> str:
-    # Example: 2026-06-24_12-47-19_123456
-    return datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
 
 
 class CameraDriver:
