@@ -11,6 +11,13 @@ from src.utils.math_utils import calculate_sha256
 logger = logging.getLogger(__name__)
 
 
+def create_capture_event(motion_state: MotionState) -> None:
+    """
+    Creates a new capture event in the database.
+    """
+    pass
+
+
 def save_footage_item(file_path: Path, size_bytes: int, footage_type: FootageType, motion_state: MotionState,
                       duration_s: int | None,
                       capture_end_at: datetime | None) -> None:

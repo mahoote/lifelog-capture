@@ -1,4 +1,5 @@
 import sqlite3
+from uuid import uuid4
 
 from src.configs.config import DATA_DIR, DATABASE_PATH
 from src.mappers.footage_item_mapper import row_to_footage_item
@@ -72,6 +73,54 @@ def init_database() -> None:
 
         connection.commit()
 
+def insert_capture_event(started_at: str, ended_at: str, motion_state: str) -> None:
+    """
+    Add a new CaptureEvent to the database.
+
+    Args:
+        started_at (str): Timestamp when the capture event started.
+        ended_at (str): Timestamp when the capture event ended.
+        motion_state (str): Motion detection state during the capture event.
+    """
+    with get_connection() as connection:
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            INSERT INTO capture_event (id, started_at, ended_at, motion_state)
+            VALUES (?, ?, ?, ?)
+            """,
+            (str(uuid4()), started_at, ended_at, motion_state)
+        )
+
+        connection.commit()
+
+def update_capture_event(id: str, ended_at: str) -> bool:
+    """
+    Update an existing CaptureEvent in the database.
+
+    Args:
+        id (str): The ID of the capture event to update.
+        ended_at (str): New timestamp when the capture event ended.
+
+    Returns:
+        bool: if the update was successful, False otherwise.
+    """
+    with get_connection() as connection:
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            UPDATE capture_event
+            SET ended_at = ?
+            WHERE id = ?
+            """,
+            (ended_at, id)
+        )
+
+        connection.commit()
+        return cursor.rowcount > 0
+
 def insert_footage_item(item: FootageItemInsert) -> None:
     """
     Add a new FootageItem to the upload queue.
@@ -85,11 +134,12 @@ def insert_footage_item(item: FootageItemInsert) -> None:
         cursor.execute(
             """
             INSERT INTO footage_item (
-                capture_event_id, sequence_index, type, role, file_path,
+                id, capture_event_id, sequence_index, type, role, file_path,
                 size_bytes, sha256, duration_s, capture_end_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
+                str(uuid4()),
                 item.capture_event_id,
                 item.sequence_index,
                 item.type,
