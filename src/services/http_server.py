@@ -42,13 +42,13 @@ def list_footage():
             "capture_end_at": item.capture_end_at.isoformat() if item.capture_end_at else None,
             "last_error": item.last_error,
         }
-        for item in storage.list_pending()
+        for item in storage.list_pending_footage()
     ]
 
 
 @app.get("/footage/{file_id}")
 def download_footage(file_id: str):
-    item = storage.get_item(file_id)
+    item = storage.get_footage_item(file_id)
 
     if item is None:
         raise HTTPException(status_code=404, detail="File not found in database")
@@ -67,7 +67,7 @@ def download_footage(file_id: str):
 
 @app.post("/ack")
 def handle_ack(request: AckRequest):
-    success = storage.update_state(request.file_id, FootageState.ACKED)
+    success = storage.update_footage_state(request.file_id, FootageState.ACKED)
 
     if not success:
         raise HTTPException(status_code=404, detail="File not found")

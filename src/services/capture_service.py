@@ -149,7 +149,7 @@ class CaptureService:
 
         self.log_service.record_footage_taken()
 
-        storage_service.write_item(
+        storage_service.save_footage_item(
             file_path=footage_path,
             size_bytes=footage_path.stat().st_size,
             footage_type=FootageType.PHOTO,
@@ -184,7 +184,7 @@ class CaptureService:
             logger.info(f"Captured video: {footage_path}")
             self.log_service.record_footage_taken()
 
-            storage_service.write_item(
+            storage_service.save_footage_item(
                 file_path=footage_path,
                 size_bytes=footage_path.stat().st_size,
                 footage_type=FootageType.VIDEO,

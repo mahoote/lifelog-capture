@@ -2,7 +2,8 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from src.database import add_item, get_pending_items, set_item_state, delete_item_by_id, get_item_by_id
+from src.database import insert_footage_item, select_pending_items, update_item_state, delete_item_by_id, \
+    select_item_by_id
 from src.types.footage_item import FootageType, FootageItemInsert, FootageItem, FootageState
 from src.types.motion_state import MotionState
 from src.utils.math_utils import calculate_sha256
@@ -10,9 +11,9 @@ from src.utils.math_utils import calculate_sha256
 logger = logging.getLogger(__name__)
 
 
-def write_item(file_path: Path, size_bytes: int, footage_type: FootageType, motion_state: MotionState,
-               duration_s: int | None,
-               capture_end_at: datetime | None) -> None:
+def save_footage_item(file_path: Path, size_bytes: int, footage_type: FootageType, motion_state: MotionState,
+                      duration_s: int | None,
+                      capture_end_at: datetime | None) -> None:
     """
     Writes a new footage item to the database.
     Only includes the minimum required fields.
@@ -32,10 +33,10 @@ def write_item(file_path: Path, size_bytes: int, footage_type: FootageType, moti
         motion_state=motion_state
     )
 
-    add_item(new_footage_item)
+    insert_footage_item(new_footage_item)
 
 
-def update_state(item_id: str, new_state: FootageState) -> bool:
+def update_footage_state(item_id: str, new_state: FootageState) -> bool:
     """
     Updates the state of a footage item in the database.
     """
@@ -43,24 +44,24 @@ def update_state(item_id: str, new_state: FootageState) -> bool:
         logger.error(f"Invalid state '{new_state}' provided for item {item_id}.")
         return False
 
-    return set_item_state(item_id, new_state)
+    return update_item_state(item_id, new_state)
 
 
-def list_pending() -> list[FootageItem]:
+def list_pending_footage() -> list[FootageItem]:
     """
     Returns a list of all pending footage items in the database.
     """
-    return get_pending_items()
+    return select_pending_items()
 
 
-def get_item(item_id: str) -> FootageItem | None:
+def get_footage_item(item_id: str) -> FootageItem | None:
     """
     Returns one footage item by ID.
     """
-    return get_item_by_id(item_id)
+    return select_item_by_id(item_id)
 
 
-def delete_item(item_id: str) -> None:
+def delete_footage_item(item_id: str) -> None:
     """
     Deletes a footage item from the database.
     """

@@ -54,7 +54,7 @@ def init_database() -> None:
 
         connection.commit()
 
-def add_item(item: FootageItemInsert) -> None:
+def insert_footage_item(item: FootageItemInsert) -> None:
     """
     Add a new FootageItem to the upload queue.
 
@@ -83,7 +83,7 @@ def add_item(item: FootageItemInsert) -> None:
 
         connection.commit()
 
-def set_item_state(id: str, new_state: FootageState) -> bool:
+def update_item_state(id: str, new_state: FootageState) -> bool:
     """
     Update the state of a FootageItem in the upload queue.
 
@@ -109,7 +109,7 @@ def set_item_state(id: str, new_state: FootageState) -> bool:
         connection.commit()
         return cursor.rowcount > 0
 
-def get_pending_items() -> list[FootageItem]:
+def select_pending_items() -> list[FootageItem]:
     """
     Retrieve all FootageItems in the upload queue that are in the 'pending' state.
 
@@ -130,7 +130,7 @@ def get_pending_items() -> list[FootageItem]:
         rows = cursor.fetchall()
         return [row_to_footage_item(row) for row in rows]
 
-def get_item_by_id(id: str) -> FootageItem | None:
+def select_item_by_id(id: str) -> FootageItem | None:
     """
     Retrieve one FootageItem by ID.
     """
