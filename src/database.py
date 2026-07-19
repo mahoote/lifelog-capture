@@ -19,6 +19,7 @@ def get_connection() -> sqlite3.Connection:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     connection = sqlite3.connect(DATABASE_PATH)
+    connection.execute("PRAGMA foreign_keys = ON")
     connection.row_factory = sqlite3.Row
 
     return connection
@@ -33,13 +34,26 @@ def init_database() -> None:
 
         cursor.execute(
             """
+            CREATE TABLE IF NOT EXISTS capture_event (
+                id TEXT PRIMARY KEY,
+                started_at TEXT NOT NULL,
+                ended_at TEXT NOT NULL,
+                motion_state TEXT NOT NULL
+            )
+            """
+        )
+
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS footage_item (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id TEXT PRIMARY KEY,
+                capture_event_id TEXT NOT NULL,
+                sequence_index INTEGER NOT NULL,
                 type TEXT NOT NULL,
+                role TEXT NOT NULL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 file_path TEXT NOT NULL,
                 size_bytes INTEGER NOT NULL,
-                motion_state TEXT NOT NULL,
                 state TEXT NOT NULL DEFAULT 'pending',
                 attempts INTEGER NOT NULL DEFAULT 0,
                 sha256 TEXT,
@@ -47,7 +61,11 @@ def init_database() -> None:
                 last_error TEXT,
                 duration_s INTEGER,
                 capture_end_at TEXT,
-                acked_at TEXT
+                acked_at TEXT,
+
+                FOREIGN KEY (capture_event_id)
+                    REFERENCES capture_event (id)
+                    ON DELETE CASCADE
             )
             """
         )
@@ -67,17 +85,20 @@ def insert_footage_item(item: FootageItemInsert) -> None:
         cursor.execute(
             """
             INSERT INTO footage_item (
-                type, file_path, size_bytes, sha256, duration_s, capture_end_at, motion_state
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                capture_event_id, sequence_index, type, role, file_path,
+                size_bytes, sha256, duration_s, capture_end_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
+                item.capture_event_id,
+                item.sequence_index,
                 item.type,
+                item.role,
                 str(item.file_path),
                 item.size_bytes,
                 item.sha256,
                 item.duration_s,
-                item.capture_end_at,
-                item.motion_state
+                item.capture_end_at
             )
         )
 

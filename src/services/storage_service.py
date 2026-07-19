@@ -4,7 +4,7 @@ from pathlib import Path
 
 from src.database import insert_footage_item, select_pending_items, update_item_state, delete_item_by_id, \
     select_item_by_id
-from src.types.footage_item import FootageType, FootageItemInsert, FootageItem, FootageState
+from src.types.footage_item import FootageType, FootageItemInsert, FootageItem, FootageState, FootageRole
 from src.types.motion_state import MotionState
 from src.utils.math_utils import calculate_sha256
 
@@ -24,13 +24,15 @@ def save_footage_item(file_path: Path, size_bytes: int, footage_type: FootageTyp
         logger.error(f"Failed to calculate SHA256 for file {file_path}.")
 
     new_footage_item = FootageItemInsert(
+        capture_event_id=None,  # TODO: Dynamic
+        sequence_index=0,  # TODO: Dynamic
         type=footage_type,
+        role=FootageRole.SELECTED,  # TODO: Dynamic
         file_path=file_path,
         size_bytes=size_bytes,
         sha256=sha256,
         duration_s=duration_s,
-        capture_end_at=capture_end_at,
-        motion_state=motion_state
+        capture_end_at=capture_end_at
     )
 
     insert_footage_item(new_footage_item)

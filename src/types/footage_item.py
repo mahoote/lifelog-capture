@@ -75,10 +75,12 @@ class FootageItem:
 
 @dataclass
 class FootageItemInsert:
+    capture_event_id: UUID | None
+    sequence_index: int
     type: FootageType
+    role: FootageRole
     file_path: Path
     size_bytes: int
     sha256: str
     duration_s: int | None
     capture_end_at: datetime | None
-    motion_state: MotionState
