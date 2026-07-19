@@ -23,6 +23,14 @@ class FootageState(StrEnum):
     FAILED = "failed"
 
 
+class FootageRole(StrEnum):
+    """Role of the footage item in the capture event."""
+
+    BURST = "burst"  # Used for photos
+    SELECTED = "selected"  # Used for photos
+    CONTEXT = "context"  # Used for video clips
+
+
 @dataclass
 class FootageItem:
     """
@@ -30,11 +38,13 @@ class FootageItem:
 
     Attributes:
         id: Unique identifier for the capture.
+        capture_event_id: Identifier of the associated capture event.
+        sequence_index: Order of the capture within the event.
         type: Whether the capture is a photo or video.
+        role: Role of the capture in the event (e.g., burst, selected, context).
         created_at: Timestamp when the capture was created.
         file_path: Location of the file on disk.
         size_bytes: Size of the file in bytes.
-        motion_state: Current motion detection state.
         state: Current upload state.
         attempt: Number of upload attempts made.
         sha256: Optional SHA-256 checksum of the file.
@@ -46,11 +56,13 @@ class FootageItem:
     """
 
     id: UUID | None
+    capture_event_id: UUID | None
+    sequence_index: int
     type: FootageType
+    role: FootageRole
     created_at: datetime
     file_path: Path
     size_bytes: int
-    motion_state: MotionState
     state: FootageState = FootageState.PENDING
     attempt: int = 0
     sha256: str | None = None
