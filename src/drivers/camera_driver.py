@@ -146,7 +146,7 @@ class CameraDriver:
                 - UTC timestamp when recording finished.
         """
 
-        out_path = self.footage_dir / f"{timestamp_name()}.mp4"
+        out_path = self.footage_dir / f"videos/{timestamp_name()}.mp4"
 
         self._ensure_camera_available()
 
