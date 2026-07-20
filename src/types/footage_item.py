@@ -25,7 +25,7 @@ class FootageRole(StrEnum):
     """Role of the footage item in the capture event."""
 
     BURST = "burst"  # Used for photos
-    SELECTED = "selected"  # Used for photos
+    CANDIDATE = "candidate"  # Used for photos
     CONTEXT = "context"  # Used for video clips
 
 
@@ -39,7 +39,7 @@ class FootageItem:
         capture_event_id: Identifier of the associated capture event.
         sequence_index: Order of the capture within the event.
         type: Whether the capture is a photo or video.
-        role: Role of the capture in the event (e.g., burst, selected, context).
+        role: Role of the capture in the event (e.g., burst, candidate, context).
         created_at: Timestamp when the capture was created.
         file_path: Location of the file on disk.
         size_bytes: Size of the file in bytes.

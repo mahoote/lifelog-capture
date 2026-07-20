@@ -163,7 +163,7 @@ class CaptureService:
         storage_service.save_footage_item(
             capture_event_id=capture_event_id,
             sequence_index=sequence_index if sequence_index is not None else 0,
-            role=role if role is not None else FootageRole.SELECTED,
+            role=role if role is not None else FootageRole.CANDIDATE,
             file_path=footage_path,
             size_bytes=footage_path.stat().st_size,
             footage_type=FootageType.PHOTO,
