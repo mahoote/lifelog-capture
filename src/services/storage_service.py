@@ -1,41 +1,53 @@
 import logging
-from datetime import datetime
 from pathlib import Path
+from uuid import UUID
 
-from src.database import add_item, get_pending_items, set_item_state, delete_item_by_id, get_item_by_id
-from src.types.footage_item import FootageType, FootageItemInsert, FootageItem, FootageState
+from src.database import insert_footage_item, update_item_state, delete_item_by_id, \
+    select_item_by_id, select_pending_capture_events, insert_capture_event
+from src.types.capture_event import CaptureEvent, CaptureEventInsert
+from src.types.footage_item import FootageType, FootageItemInsert, FootageItem, FootageState, FootageRole
 from src.types.motion_state import MotionState
-from src.utils.math_utils import calculate_sha256
 
 logger = logging.getLogger(__name__)
 
 
-def write_item(file_path: Path, size_bytes: int, footage_type: FootageType, motion_state: MotionState,
-               duration_s: int | None,
-               capture_end_at: datetime | None) -> None:
+def create_capture_event(motion_state: MotionState, ended_at: str | None) -> CaptureEvent | None:
+    """
+    Creates a new capture event in the database.
+    """
+    new_capture_event = CaptureEventInsert(
+        ended_at=ended_at,
+        motion_state=motion_state
+    )
+
+    return insert_capture_event(new_capture_event)
+
+
+def save_footage_item(capture_event_id: UUID | None,
+                      sequence_index: int,
+                      role: FootageRole,
+                      file_path: Path,
+                      size_bytes: int,
+                      footage_type: FootageType,
+                      duration_s: int | None) -> None:
     """
     Writes a new footage item to the database.
     Only includes the minimum required fields.
     """
-    sha256 = calculate_sha256(file_path)
-
-    if not sha256:
-        logger.error(f"Failed to calculate SHA256 for file {file_path}.")
-
     new_footage_item = FootageItemInsert(
+        capture_event_id=capture_event_id,
+        sequence_index=sequence_index,
         type=footage_type,
+        role=role,
         file_path=file_path,
         size_bytes=size_bytes,
-        sha256=sha256,
         duration_s=duration_s,
-        capture_end_at=capture_end_at,
-        motion_state=motion_state
     )
 
-    add_item(new_footage_item)
+    insert_footage_item(new_footage_item)
 
 
-def update_state(item_id: str, new_state: FootageState) -> bool:
+def update_footage_state(item_id: str, new_state: FootageState) -> bool:
     """
     Updates the state of a footage item in the database.
     """
@@ -43,24 +55,24 @@ def update_state(item_id: str, new_state: FootageState) -> bool:
         logger.error(f"Invalid state '{new_state}' provided for item {item_id}.")
         return False
 
-    return set_item_state(item_id, new_state)
+    return update_item_state(item_id, new_state)
 
 
-def list_pending() -> list[FootageItem]:
+def list_pending_capture_events() -> list[CaptureEvent]:
     """
-    Returns a list of all pending footage items in the database.
+    Returns a list of all pending capture events in the database.
     """
-    return get_pending_items()
+    return select_pending_capture_events()
 
 
-def get_item(item_id: str) -> FootageItem | None:
+def get_footage_item(item_id: str) -> FootageItem | None:
     """
     Returns one footage item by ID.
     """
-    return get_item_by_id(item_id)
+    return select_item_by_id(item_id)
 
 
-def delete_item(item_id: str) -> None:
+def delete_footage_item(item_id: str) -> None:
     """
     Deletes a footage item from the database.
     """

@@ -1,10 +1,12 @@
 import logging
 import threading
 from time import monotonic
+from uuid import UUID
 
 from src.drivers.camera_driver import CameraDriver
 from src.services import storage_service
-from src.types.footage_item import FootageType
+from src.types.footage_item import FootageType, FootageRole
+from src.utils.date_utils import timestamp_utc
 from src.utils.led_utils import led_on, led_off, led_blink_loop, led_blink
 from src.services.log_service import LogService
 from src.services.motion_service import MotionService
@@ -118,7 +120,7 @@ class CaptureService:
                         case MotionState.ACTIVE:
                             self._capture_video()
                         case _:
-                            self._capture_photo()
+                            self._capture_photo(capture_event_id=None, role=None, sequence_index=None)
 
                     last_capture_at = monotonic()
 
@@ -140,22 +142,32 @@ class CaptureService:
                 off_period_s=0.5,
             )
 
-    def _capture_photo(self) -> None:
+    def _capture_photo(self, capture_event_id: UUID | None, role: FootageRole | None,
+                       sequence_index: int | None) -> None:
         """
         Captures a photo and saves it to the storage.
         """
+        capture_ended_at = timestamp_utc()  # Gets the same timestamp as the photo capture for consistency
         footage_path = self._camera.capture_jpeg()
         logger.info(f"Captured photo: {footage_path}")
 
         self.log_service.record_footage_taken()
 
-        storage_service.write_item(
+        if capture_event_id is None:
+            capture_event = storage_service.create_capture_event(
+                motion_state=self.motion_service.state,
+                ended_at=capture_ended_at,
+            )
+            capture_event_id = capture_event.id if capture_event is not None else None
+
+        storage_service.save_footage_item(
+            capture_event_id=capture_event_id,
+            sequence_index=sequence_index if sequence_index is not None else 0,
+            role=role if role is not None else FootageRole.CANDIDATE,
             file_path=footage_path,
             size_bytes=footage_path.stat().st_size,
             footage_type=FootageType.PHOTO,
-            motion_state=self.motion_service.state,
             duration_s=None,
-            capture_end_at=None
         )
 
         led_blink(0, 0.2)
@@ -184,13 +196,21 @@ class CaptureService:
             logger.info(f"Captured video: {footage_path}")
             self.log_service.record_footage_taken()
 
-            storage_service.write_item(
+            capture_event = storage_service.create_capture_event(motion_state=self.motion_service.state,
+                                                                 ended_at=capture_end_at.isoformat())
+            capture_event_id = capture_event.id if capture_event is not None else None
+
+            for i in range(3):
+                self._capture_photo(capture_event_id=capture_event_id, role=FootageRole.BURST, sequence_index=i)
+
+            storage_service.save_footage_item(
+                capture_event_id=capture_event_id,
+                sequence_index=3,
+                role=FootageRole.CONTEXT,
                 file_path=footage_path,
                 size_bytes=footage_path.stat().st_size,
                 footage_type=FootageType.VIDEO,
-                motion_state=self.motion_service.state,
                 duration_s=VIDEO_DURATION_SECONDS,
-                capture_end_at=capture_end_at
             )
 
 

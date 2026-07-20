@@ -5,7 +5,7 @@ from pathlib import Path
 from time import sleep
 from typing import Literal
 
-from src.utils.date_utils import _timestamp_name
+from src.utils.date_utils import timestamp_name
 
 try:
     from libcamera import Transform
@@ -116,7 +116,7 @@ class CameraDriver:
         Returns:
             Path: The path to the saved JPEG image.
         """
-        out_path = self.footage_dir / f"{_timestamp_name()}.jpeg"
+        out_path = self.footage_dir / f"{timestamp_name()}.jpeg"
 
         self._ensure_camera_available()
         self._switch_mode("photo")
@@ -146,7 +146,7 @@ class CameraDriver:
                 - UTC timestamp when recording finished.
         """
 
-        out_path = self.footage_dir / f"{_timestamp_name()}.mp4"
+        out_path = self.footage_dir / f"videos/{timestamp_name()}.mp4"
 
         self._ensure_camera_available()
 
