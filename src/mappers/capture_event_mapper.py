@@ -11,5 +11,5 @@ def row_to_capture_event(row: sqlite3.Row) -> CaptureEvent:
         started_at=row["started_at"],
         ended_at=row["ended_at"],
         motion_state=MotionState(row["motion_state"]),
-        footage_items=row["footage_items"],
+        footage_items=None,
     )
