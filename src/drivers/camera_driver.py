@@ -70,7 +70,10 @@ class CameraDriver:
                 self.picam2 = None
 
         self.footage_dir = Path(footage_dir)
+        self.videos_dir = self.footage_dir / "videos"
+
         self.footage_dir.mkdir(parents=True, exist_ok=True)
+        self.videos_dir.mkdir(parents=True, exist_ok=True)
         self.current_mode: Literal["photo", "video"] | None = None
 
     def start_camera(self) -> bool:
@@ -131,7 +134,7 @@ class CameraDriver:
             seconds: int,
     ) -> tuple[Path, datetime]:
         """
-        Record a video clip, save it under footage/<timestamp>.h264,
+        Record a video clip, save it under footage/videos/<timestamp>.h264,
         and return the saved file path along with the time recording ended.
 
         The camera switches to video mode, records for the specified
@@ -146,7 +149,7 @@ class CameraDriver:
                 - UTC timestamp when recording finished.
         """
 
-        out_path = self.footage_dir / f"videos/{timestamp_name()}.mp4"
+        out_path = self.videos_dir / f"{timestamp_name()}.mp4"
 
         self._ensure_camera_available()
 
