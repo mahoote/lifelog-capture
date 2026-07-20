@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from uuid import UUID
 
 from src.database import insert_footage_item, update_item_state, delete_item_by_id, \
     select_item_by_id, select_pending_capture_events, insert_capture_event
@@ -10,7 +11,7 @@ from src.types.motion_state import MotionState
 logger = logging.getLogger(__name__)
 
 
-def create_capture_event(ended_at: str | None, motion_state: MotionState) -> None:
+def create_capture_event(motion_state: MotionState, ended_at: str | None) -> CaptureEvent | None:
     """
     Creates a new capture event in the database.
     """
@@ -19,10 +20,13 @@ def create_capture_event(ended_at: str | None, motion_state: MotionState) -> Non
         motion_state=motion_state
     )
 
-    insert_capture_event(new_capture_event)
+    return insert_capture_event(new_capture_event)
 
 
-def save_footage_item(file_path: Path,
+def save_footage_item(capture_event_id: UUID | None,
+                      sequence_index: int,
+                      role: FootageRole,
+                      file_path: Path,
                       size_bytes: int,
                       footage_type: FootageType,
                       duration_s: int | None) -> None:
@@ -31,10 +35,10 @@ def save_footage_item(file_path: Path,
     Only includes the minimum required fields.
     """
     new_footage_item = FootageItemInsert(
-        capture_event_id=None,  # TODO: Dynamic
-        sequence_index=0,  # TODO: Dynamic
+        capture_event_id=capture_event_id,
+        sequence_index=sequence_index,
         type=footage_type,
-        role=FootageRole.SELECTED,  # TODO: Dynamic
+        role=role,
         file_path=file_path,
         size_bytes=size_bytes,
         duration_s=duration_s,

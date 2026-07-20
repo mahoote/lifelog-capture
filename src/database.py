@@ -4,9 +4,11 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from src.configs.config import DATA_DIR, DATABASE_PATH
+from src.mappers.capture_event_mapper import row_to_capture_event
 from src.mappers.footage_item_mapper import row_to_footage_item
 from src.types.capture_event import CaptureEvent, CaptureEventInsert
 from src.types.footage_item import FootageItem, FootageState, FootageItemInsert
+from src.utils.date_utils import timestamp_utc
 
 
 def get_connection() -> sqlite3.Connection:
@@ -51,7 +53,7 @@ def init_database() -> None:
             """
             CREATE TABLE IF NOT EXISTS footage_item (
                 id TEXT PRIMARY KEY,
-                capture_event_id TEXT NOT NULL,
+                capture_event_id TEXT,
                 sequence_index INTEGER NOT NULL,
                 type TEXT NOT NULL,
                 role TEXT NOT NULL,
@@ -74,7 +76,7 @@ def init_database() -> None:
 
         connection.commit()
 
-def insert_capture_event(capture_event: CaptureEventInsert) -> None:
+def insert_capture_event(capture_event: CaptureEventInsert) -> CaptureEvent | None:
     """
     Add a new CaptureEvent to the database.
 
@@ -88,14 +90,21 @@ def insert_capture_event(capture_event: CaptureEventInsert) -> None:
             """
             INSERT INTO capture_event (id, started_at, ended_at, motion_state)
             VALUES (?, ?, ?, ?)
+            RETURNING *
             """,
             (str(uuid4()),
-            datetime.now(timezone.utc),
+            timestamp_utc(),
             capture_event.ended_at,
             capture_event.motion_state)
         )
 
+        row = cursor.fetchone()
         connection.commit()
+
+        if row is None:
+            return None
+
+        return row_to_capture_event(row)
 
 def update_capture_event(id: str, ended_at: str) -> bool:
     """
@@ -201,7 +210,7 @@ def insert_footage_item(item: FootageItemInsert) -> None:
             """,
             (
                 str(uuid4()),
-                item.capture_event_id,
+                str(item.capture_event_id) if item.capture_event_id is not None else None,
                 item.sequence_index,
                 item.type,
                 item.role,
