@@ -1,7 +1,6 @@
 import sqlite3
 import json
-from datetime import datetime, timezone
-from uuid import uuid4
+from uuid import uuid4, UUID
 
 from src.configs.config import DATA_DIR, DATABASE_PATH
 from src.mappers.capture_event_mapper import row_to_capture_event
@@ -61,7 +60,7 @@ def init_database() -> None:
                 file_path TEXT NOT NULL,
                 size_bytes INTEGER NOT NULL,
                 state TEXT NOT NULL DEFAULT 'pending',
-                attempts INTEGER NOT NULL DEFAULT 0,
+                attempt INTEGER NOT NULL DEFAULT 0,
                 last_attempt_at TEXT,
                 last_error TEXT,
                 duration_s INTEGER,
@@ -158,7 +157,7 @@ def select_pending_capture_events() -> list[CaptureEvent]:
                         'file_path', footage_item.file_path,
                         'size_bytes', footage_item.size_bytes,
                         'state', footage_item.state,
-                        'attempts', footage_item.attempts,
+                        'attempt', footage_item.attempt,
                         'last_attempt_at', footage_item.last_attempt_at,
                         'last_error', footage_item.last_error,
                         'duration_s', footage_item.duration_s,
@@ -182,7 +181,7 @@ def select_pending_capture_events() -> list[CaptureEvent]:
 
     return [
         CaptureEvent(
-            id=row["id"],
+            id=UUID(row["id"]),
             started_at=row["started_at"],
             ended_at=row["ended_at"],
             motion_state=row["motion_state"],
