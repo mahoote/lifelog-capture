@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from fastapi.encoders import jsonable_encoder
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -28,22 +29,7 @@ def health(request: Request):
 
 @app.get("/footage")
 def list_footage():
-    return [
-        {
-            "id": str(item.id),
-            "type": item.type,
-            "created_at": item.created_at.isoformat(),
-            "size_bytes": item.size_bytes,
-            "motion_state": item.motion_state,
-            "state": item.state,
-            "attempt": item.attempt,
-            "sha256": item.sha256,
-            "duration_s": item.duration_s,
-            "capture_end_at": item.capture_end_at.isoformat() if item.capture_end_at else None,
-            "last_error": item.last_error,
-        }
-        for item in storage.list_pending_footage()
-    ]
+    return jsonable_encoder(storage.list_pending_capture_events())
 
 
 @app.get("/footage/{file_id}")

@@ -153,9 +153,7 @@ class CaptureService:
             file_path=footage_path,
             size_bytes=footage_path.stat().st_size,
             footage_type=FootageType.PHOTO,
-            motion_state=self.motion_service.state,
             duration_s=None,
-            capture_end_at=None
         )
 
         led_blink(0, 0.2)
@@ -188,9 +186,7 @@ class CaptureService:
                 file_path=footage_path,
                 size_bytes=footage_path.stat().st_size,
                 footage_type=FootageType.VIDEO,
-                motion_state=self.motion_service.state,
                 duration_s=VIDEO_DURATION_SECONDS,
-                capture_end_at=capture_end_at
             )
 
 

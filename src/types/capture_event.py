@@ -22,3 +22,9 @@ class CaptureEvent:
     ended_at: str
     motion_state: MotionState
     footage_items: list[FootageItem] | None
+
+
+@dataclass
+class CaptureEventInsert:
+    ended_at: str | None
+    motion_state: MotionState

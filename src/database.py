@@ -1,10 +1,11 @@
 import sqlite3
 import json
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from src.configs.config import DATA_DIR, DATABASE_PATH
 from src.mappers.footage_item_mapper import row_to_footage_item
-from src.types.capture_event import CaptureEvent
+from src.types.capture_event import CaptureEvent, CaptureEventInsert
 from src.types.footage_item import FootageItem, FootageState, FootageItemInsert
 
 
@@ -59,11 +60,9 @@ def init_database() -> None:
                 size_bytes INTEGER NOT NULL,
                 state TEXT NOT NULL DEFAULT 'pending',
                 attempts INTEGER NOT NULL DEFAULT 0,
-                sha256 TEXT,
                 last_attempt_at TEXT,
                 last_error TEXT,
                 duration_s INTEGER,
-                capture_end_at TEXT,
                 acked_at TEXT,
 
                 FOREIGN KEY (capture_event_id)
@@ -75,14 +74,12 @@ def init_database() -> None:
 
         connection.commit()
 
-def insert_capture_event(started_at: str, ended_at: str, motion_state: str) -> None:
+def insert_capture_event(capture_event: CaptureEventInsert) -> None:
     """
     Add a new CaptureEvent to the database.
 
     Args:
-        started_at (str): Timestamp when the capture event started.
-        ended_at (str): Timestamp when the capture event ended.
-        motion_state (str): Motion detection state during the capture event.
+        capture_event (CaptureEvent): The capture event to insert.
     """
     with get_connection() as connection:
         cursor = connection.cursor()
@@ -92,7 +89,10 @@ def insert_capture_event(started_at: str, ended_at: str, motion_state: str) -> N
             INSERT INTO capture_event (id, started_at, ended_at, motion_state)
             VALUES (?, ?, ?, ?)
             """,
-            (str(uuid4()), started_at, ended_at, motion_state)
+            (str(uuid4()),
+            datetime.now(timezone.utc),
+            capture_event.ended_at,
+            capture_event.motion_state)
         )
 
         connection.commit()
@@ -118,65 +118,6 @@ def update_capture_event(id: str, ended_at: str) -> bool:
             WHERE id = ?
             """,
             (ended_at, id)
-        )
-
-        connection.commit()
-        return cursor.rowcount > 0
-
-def insert_footage_item(item: FootageItemInsert) -> None:
-    """
-    Add a new FootageItem to the upload queue.
-
-    Args:
-        item (FootageItemInsert): The footage item to add.
-    """
-    with get_connection() as connection:
-        cursor = connection.cursor()
-
-        cursor.execute(
-            """
-            INSERT INTO footage_item (
-                id, capture_event_id, sequence_index, type, role, file_path,
-                size_bytes, sha256, duration_s, capture_end_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                str(uuid4()),
-                item.capture_event_id,
-                item.sequence_index,
-                item.type,
-                item.role,
-                str(item.file_path),
-                item.size_bytes,
-                item.sha256,
-                item.duration_s,
-                item.capture_end_at
-            )
-        )
-
-        connection.commit()
-
-def update_item_state(id: str, new_state: FootageState) -> bool:
-    """
-    Update the state of a FootageItem in the upload queue.
-
-    Args:
-        id (str): The ID of the footage item to update.
-        new_state (FootageState): The new state to set.
-
-    Returns:
-        bool: True if the update was successful, False otherwise.
-    """
-    with get_connection() as connection:
-        cursor = connection.cursor()
-
-        cursor.execute(
-            """
-            UPDATE footage_item
-            SET state = ?
-            WHERE id = ?
-            """,
-            (new_state, id)
         )
 
         connection.commit()
@@ -209,11 +150,9 @@ def select_pending_capture_events() -> list[CaptureEvent]:
                         'size_bytes', footage_item.size_bytes,
                         'state', footage_item.state,
                         'attempts', footage_item.attempts,
-                        'sha256', footage_item.sha256,
                         'last_attempt_at', footage_item.last_attempt_at,
                         'last_error', footage_item.last_error,
                         'duration_s', footage_item.duration_s,
-                        'capture_end_at', footage_item.capture_end_at,
                         'acked_at', footage_item.acked_at
                     )
                 ) AS footage_items
@@ -242,6 +181,63 @@ def select_pending_capture_events() -> list[CaptureEvent]:
         )
         for row in rows
     ]
+
+def insert_footage_item(item: FootageItemInsert) -> None:
+    """
+    Add a new FootageItem to the upload queue.
+
+    Args:
+        item (FootageItemInsert): The footage item to add.
+    """
+    with get_connection() as connection:
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            INSERT INTO footage_item (
+                id, capture_event_id, sequence_index, type, role, file_path,
+                size_bytes, duration_s
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(uuid4()),
+                item.capture_event_id,
+                item.sequence_index,
+                item.type,
+                item.role,
+                str(item.file_path),
+                item.size_bytes,
+                item.duration_s
+            )
+        )
+
+        connection.commit()
+
+def update_item_state(id: str, new_state: FootageState) -> bool:
+    """
+    Update the state of a FootageItem in the upload queue.
+
+    Args:
+        id (str): The ID of the footage item to update.
+        new_state (FootageState): The new state to set.
+
+    Returns:
+        bool: True if the update was successful, False otherwise.
+    """
+    with get_connection() as connection:
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            UPDATE footage_item
+            SET state = ?
+            WHERE id = ?
+            """,
+            (new_state, id)
+        )
+
+        connection.commit()
+        return cursor.rowcount > 0
 
 def select_item_by_id(id: str) -> FootageItem | None:
     """
