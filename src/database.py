@@ -1,8 +1,10 @@
 import sqlite3
+import json
 from uuid import uuid4
 
 from src.configs.config import DATA_DIR, DATABASE_PATH
 from src.mappers.footage_item_mapper import row_to_footage_item
+from src.types.capture_event import CaptureEvent
 from src.types.footage_item import FootageItem, FootageState, FootageItemInsert
 
 
@@ -180,26 +182,66 @@ def update_item_state(id: str, new_state: FootageState) -> bool:
         connection.commit()
         return cursor.rowcount > 0
 
-def select_pending_items() -> list[FootageItem]:
+def select_pending_capture_events() -> list[CaptureEvent]:
     """
-    Retrieve all FootageItems in the upload queue that are in the 'pending' state.
-
-    Returns:
-        list[FootageItem]: A list of pending footage items.
+    Retrieve capture events that have at least one pending footage item.
+    Each capture event includes its pending footage items.
     """
     with get_connection() as connection:
         cursor = connection.cursor()
 
         cursor.execute(
             """
-            SELECT * FROM footage_item
-            WHERE state = 'pending'
-            ORDER BY created_at ASC
+            SELECT
+                capture_event.id,
+                capture_event.started_at,
+                capture_event.ended_at,
+                capture_event.motion_state,
+                json_group_array(
+                    json_object(
+                        'id', footage_item.id,
+                        'capture_event_id', footage_item.capture_event_id,
+                        'sequence_index', footage_item.sequence_index,
+                        'type', footage_item.type,
+                        'role', footage_item.role,
+                        'created_at', footage_item.created_at,
+                        'file_path', footage_item.file_path,
+                        'size_bytes', footage_item.size_bytes,
+                        'state', footage_item.state,
+                        'attempts', footage_item.attempts,
+                        'sha256', footage_item.sha256,
+                        'last_attempt_at', footage_item.last_attempt_at,
+                        'last_error', footage_item.last_error,
+                        'duration_s', footage_item.duration_s,
+                        'capture_end_at', footage_item.capture_end_at,
+                        'acked_at', footage_item.acked_at
+                    )
+                ) AS footage_items
+            FROM capture_event
+            INNER JOIN footage_item
+                ON footage_item.capture_event_id = capture_event.id
+            WHERE footage_item.state = 'pending'
+            GROUP BY
+                capture_event.id,
+                capture_event.started_at,
+                capture_event.ended_at,
+                capture_event.motion_state
+            ORDER BY capture_event.started_at ASC
             """
         )
 
         rows = cursor.fetchall()
-        return [row_to_footage_item(row) for row in rows]
+
+    return [
+        CaptureEvent(
+            id=row["id"],
+            started_at=row["started_at"],
+            ended_at=row["ended_at"],
+            motion_state=row["motion_state"],
+            footage_items=json.loads(row["footage_items"])
+        )
+        for row in rows
+    ]
 
 def select_item_by_id(id: str) -> FootageItem | None:
     """
