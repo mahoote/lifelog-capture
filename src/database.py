@@ -7,6 +7,7 @@ from src.mappers.capture_event_mapper import row_to_capture_event
 from src.mappers.footage_item_mapper import row_to_footage_item
 from src.types.capture_event import CaptureEvent, CaptureEventInsert
 from src.types.footage_item import FootageItem, FootageState, FootageItemInsert
+from src.types.motion_state import MotionState
 from src.utils.date_utils import timestamp_utc
 
 
@@ -184,7 +185,7 @@ def select_pending_capture_events() -> list[CaptureEvent]:
             id=UUID(row["id"]),
             started_at=row["started_at"],
             ended_at=row["ended_at"],
-            motion_state=row["motion_state"],
+            motion_state=MotionState(row["motion_state"]),
             footage_items=json.loads(row["footage_items"])
         )
         for row in rows
