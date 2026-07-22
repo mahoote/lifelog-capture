@@ -154,7 +154,7 @@ class CaptureService:
         Captures a photo and saves it to the storage.
         """
         capture_ended_at = timestamp_utc()  # Gets the same timestamp as the photo capture for consistency
-        footage_path = self._camera.capture_jpeg()
+        footage_path = self._camera.capture_jpg()
         logger.info(f"Captured photo: {footage_path}")
 
         self.log_service.record_footage_taken()
@@ -202,29 +202,36 @@ class CaptureService:
                                                                  ended_at=None)
             capture_event_id = capture_event.id if capture_event is not None else None
 
-            for i in range(2):
-                self._capture_photo(capture_event_id=capture_event_id, role=FootageRole.BURST, sequence_index=i)
-                if i < 1:
-                    sleep(2)
-
-            footage_path = self._camera.capture_video(VIDEO_DURATION_SECONDS)
+            footage_path, photo_paths = self._camera.capture_video_with_photos(
+                seconds=VIDEO_DURATION_SECONDS,
+                photo_count=3,
+                photo_interval_s=3.0,
+            )
             logger.info(f"Captured video: {footage_path}")
             self.log_service.record_footage_taken()
 
+            for i, photo_path in enumerate(photo_paths):
+                logger.info(f"Captured burst photo during video: {photo_path}")
+                self.log_service.record_footage_taken()
+                storage_service.save_footage_item(
+                    capture_event_id=capture_event_id,
+                    sequence_index=i,
+                    role=FootageRole.BURST,
+                    file_path=photo_path,
+                    size_bytes=photo_path.stat().st_size,
+                    footage_type=FootageType.PHOTO,
+                    duration_s=None,
+                )
+
             storage_service.save_footage_item(
                 capture_event_id=capture_event_id,
-                sequence_index=2,
+                sequence_index=len(photo_paths),
                 role=FootageRole.CONTEXT,
                 file_path=footage_path,
                 size_bytes=footage_path.stat().st_size,
                 footage_type=FootageType.VIDEO,
                 duration_s=VIDEO_DURATION_SECONDS,
             )
-
-            for i in range(3, 5):
-                self._capture_photo(capture_event_id=capture_event_id, role=FootageRole.BURST, sequence_index=i)
-                if i < 4:
-                    sleep(2)
 
             storage_service.update_capture_ended(
                 id=capture_event_id,

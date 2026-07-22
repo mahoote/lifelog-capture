@@ -110,25 +110,25 @@ class CameraDriver:
         sleep(1)
         return True
 
-    def capture_jpeg(self) -> Path:
+    def capture_jpg(self) -> Path:
         """
-        Capture a JPEG image, save it under footage/<timestamp>.jpeg,
+        Capture a JPG image, save it under footage/<timestamp>.jpg,
         and return the saved file path.
 
-        The camera switches to still mode, captures a JPEG image,
+        The camera switches to still mode, captures a JPG image,
         temporarily stores it on disk, and then reads the file back
         into memory.
 
         Returns:
-            Path: The path to the saved JPEG image.
+            Path: The path to the saved JPG image.
         """
-        out_path = self.footage_dir / f"{timestamp_name()}.jpeg"
+        out_path = self.footage_dir / f"{timestamp_name()}.jpg"
 
         self._ensure_camera_available()
         self._switch_mode("photo")
         self.picam2.capture_file(
             str(out_path),
-            format="jpeg",
+            format="jpg",
         )
         return out_path
 
@@ -139,25 +139,36 @@ class CameraDriver:
         """
         Record a video clip as raw H264, remux it to MP4 with a fixed framerate,
         and return the saved MP4 path.
-
-        The camera switches to video mode, records for the specified
-        duration, and stores the recording on disk.
-
-        Args:
-            seconds: Length of the recording in seconds.
-
-        Returns:
-            Path: The path to the saved MP4 video file.
         """
+        video_path, _photo_paths = self.capture_video_with_photos(
+            seconds=seconds,
+            photo_count=0,
+            photo_interval_s=3.0,
+        )
+        return video_path
 
+    def capture_video_with_photos(
+            self,
+            seconds: int,
+            photo_count: int = 3,
+            photo_interval_s: float = 3.0,
+    ) -> tuple[Path, list[Path]]:
+        """
+        Record a video while capturing JPG frames from the video stream.
+
+        The camera stays in video mode for the whole operation. This avoids
+        switching back to still mode during recording. The raw H264 video is
+        remuxed to MP4 with a fixed framerate before returning.
+        """
         raw_path = self.videos_dir / f"{timestamp_name()}.h264"
         mp4_path = raw_path.with_suffix(".mp4")
+        photo_paths: list[Path] = []
 
         self._ensure_camera_available()
         self._switch_mode("video")
 
         # Give the camera pipeline time to settle after still -> video mode switch.
-        sleep(5)
+        sleep(1)
 
         encoder = H264Encoder(bitrate=8_000_000, repeat=True)
         output = FileOutput(str(raw_path))
@@ -167,9 +178,30 @@ class CameraDriver:
         recording_started = monotonic()
         self.picam2.start_recording(encoder, output)
 
-        sleep(seconds)
+        try:
+            next_photo_at = recording_started
+            for _ in range(photo_count):
+                delay_s = next_photo_at - monotonic()
+                if delay_s > 0:
+                    sleep(delay_s)
 
-        self.picam2.stop_recording()
+                photo_path = self.footage_dir / f"{timestamp_name()}.jpg"
+                request = self.picam2.capture_request()
+                try:
+                    request.save("main", str(photo_path))
+                finally:
+                    request.release()
+
+                photo_paths.append(photo_path)
+                logger.info("Captured video-frame photo: %s", photo_path)
+                next_photo_at += photo_interval_s
+
+            remaining_s = seconds - (monotonic() - recording_started)
+            if remaining_s > 0:
+                sleep(remaining_s)
+        finally:
+            self.picam2.stop_recording()
+
         recording_elapsed = monotonic() - recording_started
 
         logger.info(
@@ -199,7 +231,7 @@ class CameraDriver:
 
         logger.info("Converted video to MP4: %s", mp4_path)
 
-        return mp4_path
+        return mp4_path, photo_paths
 
     def stop_camera(self) -> None:
         """
