@@ -8,7 +8,7 @@ writes to disk when footage is taken.
 
 from __future__ import annotations
 
-from datetime import datetime, time as datetime_time, timedelta
+from datetime import datetime, time as datetime_time, timedelta, timezone
 from pathlib import Path
 
 from src.services.motion_service import MotionService
@@ -22,7 +22,7 @@ class LogService:
 
         self._capture_mode_enabled = True
         self._current_state = self._get_motion_state_name()
-        self._last_accounted_at: datetime | None = datetime.now()
+        self._last_accounted_at: datetime | None = datetime.now(timezone.utc)
         self._pending_totals = self._empty_totals()
 
     def record_motion_state_change(self, new_state: MotionState | str) -> None:
@@ -31,7 +31,7 @@ class LogService:
 
         This only updates in-memory totals. It does not write to disk.
         """
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         new_state_name = self._normalise_motion_state(new_state)
 
         if self._last_accounted_at is None:
@@ -56,7 +56,7 @@ class LogService:
         This is called after a photo or video is captured. Before writing, it
         also accounts for the time since the previous state change or flush.
         """
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         if not capture_mode_enabled:
             self.pause_capture_mode()
@@ -81,7 +81,7 @@ class LogService:
         This accounts for the time up to the pause in memory, but does not write
         to disk. The pending totals are written next time footage is taken.
         """
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         if self._capture_mode_enabled and self._last_accounted_at is not None:
             self._add_interval_to_pending(
@@ -98,7 +98,7 @@ class LogService:
         Resume capture-mode accounting without counting the paused time.
         """
         self._capture_mode_enabled = True
-        self._last_accounted_at = datetime.now()
+        self._last_accounted_at = datetime.now(timezone.utc)
         self._current_state = self._get_motion_state_name()
 
     def _add_interval_to_pending(

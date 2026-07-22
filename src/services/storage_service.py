@@ -27,7 +27,7 @@ def create_capture_event(motion_state: MotionState, ended_at: str | None) -> Cap
     return insert_capture_event(new_capture_event)
 
 
-def update_capture_ended(id: UUID | None, ended_at: Date) -> None:
+def update_capture_ended(id: UUID | None, ended_at: str) -> None:
     """
     Updates the capture ended event in the database.
     """
@@ -35,7 +35,7 @@ def update_capture_ended(id: UUID | None, ended_at: Date) -> None:
         logger.error("Failed to update capture event with no ID.")
         return
 
-    updated = update_capture_event(str(id), ended_at.isoformat())
+    updated = update_capture_event(str(id), ended_at)
 
     if not updated:
         logger.error(f"Failed to update capture event with ID {id} to ended_at {ended_at}.")

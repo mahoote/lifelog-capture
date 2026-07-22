@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from time import sleep
+from time import sleep, monotonic
 from typing import Literal
 
 from src.utils.date_utils import timestamp_name
@@ -22,6 +23,8 @@ else:
     PICAMERA_IMPORT_ERROR = None
 
 from src.configs.config import PHOTO_SIZE, VIDEO_SIZE
+
+logger = logging.getLogger(__name__)
 
 
 class CameraDriver:
@@ -132,7 +135,7 @@ class CameraDriver:
     def capture_video(
             self,
             seconds: int,
-    ) -> tuple[Path, datetime]:
+    ) -> Path:
         """
         Record a video clip, save it under footage/videos/<timestamp>.h264,
         and return the saved file path along with the time recording ended.
@@ -154,19 +157,35 @@ class CameraDriver:
         self._ensure_camera_available()
         self._switch_mode("video")
 
-        # Let exposure, gain, and buffers settle after switching mode.
-        sleep(1)
+        # Give the camera pipeline time to settle after still -> video mode switch.
+        sleep(3)
+
+        # Drain a few frames so the encoder does not start on unstable buffers.
+        for _ in range(10):
+            self.picam2.capture_array("main")
 
         encoder = H264Encoder(bitrate=8_000_000)
         output = FfmpegOutput(str(out_path))
 
+        logger.info("Video recording started: %s", out_path)
+
+        recording_started = monotonic()
         self.picam2.start_recording(encoder, output)
+
         sleep(seconds)
+
         self.picam2.stop_recording()
+        recording_elapsed = monotonic() - recording_started
 
-        capture_end_at = datetime.now(timezone.utc)
+        logger.info(
+            "Video recording stopped: path=%s requested=%ss elapsed=%.2fs size=%s",
+            out_path,
+            seconds,
+            recording_elapsed,
+            out_path.stat().st_size if out_path.exists() else None,
+        )
 
-        return out_path, capture_end_at
+        return out_path
 
     def stop_camera(self) -> None:
         """

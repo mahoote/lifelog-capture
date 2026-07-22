@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 def timestamp_name() -> str:
     # Example: 2026-06-24_12-47-19_123456
-    return datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S_%f")
 
 
 def timestamp_utc() -> str:

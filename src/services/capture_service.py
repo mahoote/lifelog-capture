@@ -138,7 +138,7 @@ class CaptureService:
 
         if errored and not self._stop_capture_event.is_set():
             self._stop_motion_event.set()
-            
+
             led_blink_loop(
                 stop_event=self._stop_capture_event,
                 on_period_s=0.5,
@@ -199,26 +199,26 @@ class CaptureService:
                                                                  ended_at=None)
             capture_event_id = capture_event.id if capture_event is not None else None
 
-            for i in range(3):
-                self._capture_photo(capture_event_id=capture_event_id, role=FootageRole.BURST, sequence_index=i)
-
-            footage_path, capture_end_at = self._camera.capture_video(VIDEO_DURATION_SECONDS)
+            footage_path = self._camera.capture_video(VIDEO_DURATION_SECONDS)
             logger.info(f"Captured video: {footage_path}")
             self.log_service.record_footage_taken()
 
-            storage_service.update_capture_ended(
-                id=capture_event_id,
-                ended_at=capture_end_at,
-            )
-
             storage_service.save_footage_item(
                 capture_event_id=capture_event_id,
-                sequence_index=3,
+                sequence_index=0,
                 role=FootageRole.CONTEXT,
                 file_path=footage_path,
                 size_bytes=footage_path.stat().st_size,
                 footage_type=FootageType.VIDEO,
                 duration_s=VIDEO_DURATION_SECONDS,
+            )
+
+            for i in range(1, 4):
+                self._capture_photo(capture_event_id=capture_event_id, role=FootageRole.BURST, sequence_index=i)
+
+            storage_service.update_capture_ended(
+                id=capture_event_id,
+                ended_at=timestamp_utc(),
             )
 
 
