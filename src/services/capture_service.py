@@ -123,7 +123,7 @@ class CaptureService:
                         case MotionState.ACTIVE:
                             self._capture_video()
                         case _:
-                            self._capture_photo(capture_event_id=None, role=None, sequence_index=None)
+                            self._capture_photo()
 
                     last_capture_at = monotonic()
                     self._pause_motion_event.clear()
@@ -148,8 +148,7 @@ class CaptureService:
                 off_period_s=0.5,
             )
 
-    def _capture_photo(self, capture_event_id: UUID | None, role: FootageRole | None,
-                       sequence_index: int | None) -> None:
+    def _capture_photo(self) -> None:
         """
         Captures a photo and saves it to the storage.
         """
@@ -159,17 +158,16 @@ class CaptureService:
 
         self.log_service.record_footage_taken()
 
-        if capture_event_id is None:
-            capture_event = storage_service.create_capture_event(
-                motion_state=self.motion_service.state,
-                ended_at=capture_ended_at,
-            )
-            capture_event_id = capture_event.id if capture_event is not None else None
+        capture_event = storage_service.create_capture_event(
+            motion_state=self.motion_service.state,
+            ended_at=capture_ended_at,
+        )
+        capture_event_id = capture_event.id if capture_event is not None else None
 
         storage_service.save_footage_item(
             capture_event_id=capture_event_id,
-            sequence_index=sequence_index if sequence_index is not None else 0,
-            role=role if role is not None else FootageRole.CANDIDATE,
+            sequence_index=0,
+            role=FootageRole.CANDIDATE,
             file_path=footage_path,
             size_bytes=footage_path.stat().st_size,
             footage_type=FootageType.PHOTO,
