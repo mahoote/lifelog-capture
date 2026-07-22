@@ -192,16 +192,21 @@ class CaptureService:
         video_blink_thread.start()
 
         try:
-            footage_path, capture_end_at = self._camera.capture_video(VIDEO_DURATION_SECONDS)
-            logger.info(f"Captured video: {footage_path}")
-            self.log_service.record_footage_taken()
-
             capture_event = storage_service.create_capture_event(motion_state=self.motion_service.state,
-                                                                 ended_at=capture_end_at.isoformat())
+                                                                 ended_at=None)
             capture_event_id = capture_event.id if capture_event is not None else None
 
             for i in range(3):
                 self._capture_photo(capture_event_id=capture_event_id, role=FootageRole.BURST, sequence_index=i)
+
+            footage_path, capture_end_at = self._camera.capture_video(VIDEO_DURATION_SECONDS)
+            logger.info(f"Captured video: {footage_path}")
+            self.log_service.record_footage_taken()
+
+            storage_service.update_capture_ended(
+                id=capture_event_id,
+                ended_at=capture_end_at,
+            )
 
             storage_service.save_footage_item(
                 capture_event_id=capture_event_id,

@@ -1,9 +1,10 @@
 import logging
 from pathlib import Path
+from sqlite3 import Date
 from uuid import UUID
 
 from src.database import insert_footage_item, update_item_state, delete_item_by_id, \
-    select_item_by_id, select_pending_capture_events, insert_capture_event
+    select_item_by_id, select_pending_capture_events, insert_capture_event, update_capture_event
 from src.types.capture_event import CaptureEvent, CaptureEventInsert
 from src.types.footage_item import FootageType, FootageItemInsert, FootageItem, FootageState, FootageRole
 from src.types.motion_state import MotionState
@@ -20,7 +21,24 @@ def create_capture_event(motion_state: MotionState, ended_at: str | None) -> Cap
         motion_state=motion_state
     )
 
+    if not new_capture_event:
+        logger.error(f"Failed to create capture event.")
+
     return insert_capture_event(new_capture_event)
+
+
+def update_capture_ended(id: UUID | None, ended_at: Date) -> None:
+    """
+    Updates the capture ended event in the database.
+    """
+    if not id:
+        logger.error("Failed to update capture event with no ID.")
+        return
+
+    updated = update_capture_event(str(id), ended_at.isoformat())
+
+    if not updated:
+        logger.error(f"Failed to update capture event with ID {id} to ended_at {ended_at}.")
 
 
 def save_footage_item(capture_event_id: UUID | None,
@@ -34,6 +52,10 @@ def save_footage_item(capture_event_id: UUID | None,
     Writes a new footage item to the database.
     Only includes the minimum required fields.
     """
+    if not capture_event_id:
+        logger.error("Failed to save footage item with no capture event ID.")
+        return
+
     new_footage_item = FootageItemInsert(
         capture_event_id=capture_event_id,
         sequence_index=sequence_index,

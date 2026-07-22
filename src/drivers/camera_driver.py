@@ -152,11 +152,10 @@ class CameraDriver:
         out_path = self.videos_dir / f"{timestamp_name()}.mp4"
 
         self._ensure_camera_available()
-
         self._switch_mode("video")
 
         # Let exposure, gain, and buffers settle after switching mode.
-        sleep(2)
+        sleep(1)
 
         encoder = H264Encoder(bitrate=8_000_000)
         output = FfmpegOutput(str(out_path))
