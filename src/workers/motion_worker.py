@@ -39,7 +39,7 @@ class MotionWorker:
         try:
             self.detector.calibrate_idle()
 
-            while not stop_capture_event.is_set() or not stop_motion_event.is_set():
+            while not stop_capture_event.is_set() and not stop_motion_event.is_set():
                 self.detector.update()
                 sleep(self.detector.sample_interval_s)
         finally:
