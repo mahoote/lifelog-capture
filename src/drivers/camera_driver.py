@@ -143,7 +143,6 @@ class CameraDriver:
         video_path, _photo_paths = self.capture_video_with_extracted_photos(
             seconds=seconds,
             photo_count=0,
-            photo_interval_s=3.0,
         )
         return video_path
 
