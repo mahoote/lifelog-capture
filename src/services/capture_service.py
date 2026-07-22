@@ -38,7 +38,7 @@ class CaptureService:
         self._capture_thread: threading.Thread | None = None
         self._motion_thread: threading.Thread | None = None
         self._stop_capture_event = threading.Event()
-        self._stop_motion_event = threading.Event()
+        self._pause_motion_event = threading.Event()
 
     def start(self) -> None:
         if self._camera.camera_error:
@@ -54,7 +54,7 @@ class CaptureService:
 
         self._motion_thread = threading.Thread(
             target=self.motion_worker.run,
-            args=(self._stop_capture_event, self._stop_motion_event),
+            args=(self._stop_capture_event, self._pause_motion_event),
             name="motion-detector",
             daemon=True,
         )
@@ -117,6 +117,8 @@ class CaptureService:
                 )
 
                 if should_capture:
+                    self._pause_motion_event.set()
+
                     match motion_state:
                         case MotionState.ACTIVE:
                             self._capture_video()
@@ -124,6 +126,7 @@ class CaptureService:
                             self._capture_photo(capture_event_id=None, role=None, sequence_index=None)
 
                     last_capture_at = monotonic()
+                    self._pause_motion_event.clear()
 
         except Exception as e:
             errored = True
@@ -137,7 +140,7 @@ class CaptureService:
                 self._camera.stop_camera()
 
         if errored and not self._stop_capture_event.is_set():
-            self._stop_motion_event.set()
+            self._pause_motion_event.set()
 
             led_blink_loop(
                 stop_event=self._stop_capture_event,
