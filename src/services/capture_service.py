@@ -202,7 +202,7 @@ class CaptureService:
                                                                  ended_at=None)
             capture_event_id = capture_event.id if capture_event is not None else None
 
-            footage_path, photo_paths = self._camera.capture_video_with_photos(
+            footage_path, photo_paths = self._camera.capture_video_with_extracted_photos(
                 seconds=VIDEO_DURATION_SECONDS,
                 photo_count=3,
                 photo_interval_s=3.0,
@@ -211,7 +211,7 @@ class CaptureService:
             self.log_service.record_footage_taken()
 
             for i, photo_path in enumerate(photo_paths):
-                logger.info(f"Captured burst photo during video: {photo_path}")
+                logger.info(f"Extracted burst photo from video: {photo_path}")
                 self.log_service.record_footage_taken()
                 storage_service.save_footage_item(
                     capture_event_id=capture_event_id,

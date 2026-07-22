@@ -140,29 +140,28 @@ class CameraDriver:
         Record a video clip as raw H264, remux it to MP4 with a fixed framerate,
         and return the saved MP4 path.
         """
-        video_path, _photo_paths = self.capture_video_with_photos(
+        video_path, _photo_paths = self.capture_video_with_extracted_photos(
             seconds=seconds,
             photo_count=0,
             photo_interval_s=3.0,
         )
         return video_path
 
-    def capture_video_with_photos(
+    def capture_video_with_extracted_photos(
             self,
             seconds: int,
             photo_count: int = 3,
             photo_interval_s: float = 3.0,
     ) -> tuple[Path, list[Path]]:
         """
-        Record a video while capturing JPG frames from the video stream.
+        Record a video and extract JPG snapshots from the final MP4.
 
-        The camera stays in video mode for the whole operation. This avoids
-        switching back to still mode during recording. The raw H264 video is
-        remuxed to MP4 with a fixed framerate before returning.
+        The camera only records video during the capture window. Photos are
+        extracted afterwards with ffmpeg so the encoder is not interrupted while
+        recording.
         """
         raw_path = self.videos_dir / f"{timestamp_name()}.h264"
         mp4_path = raw_path.with_suffix(".mp4")
-        photo_paths: list[Path] = []
 
         self._ensure_camera_available()
         self._switch_mode("video")
@@ -179,26 +178,7 @@ class CameraDriver:
         self.picam2.start_recording(encoder, output)
 
         try:
-            next_photo_at = recording_started
-            for _ in range(photo_count):
-                delay_s = next_photo_at - monotonic()
-                if delay_s > 0:
-                    sleep(delay_s)
-
-                photo_path = self.footage_dir / f"{timestamp_name()}.jpg"
-                request = self.picam2.capture_request()
-                try:
-                    request.save("main", str(photo_path))
-                finally:
-                    request.release()
-
-                photo_paths.append(photo_path)
-                logger.info("Captured video-frame photo: %s", photo_path)
-                next_photo_at += photo_interval_s
-
-            remaining_s = seconds - (monotonic() - recording_started)
-            if remaining_s > 0:
-                sleep(remaining_s)
+            sleep(seconds)
         finally:
             self.picam2.stop_recording()
 
@@ -231,7 +211,59 @@ class CameraDriver:
 
         logger.info("Converted video to MP4: %s", mp4_path)
 
+        photo_paths = self._extract_video_photos(
+            video_path=mp4_path,
+            seconds=seconds,
+            photo_count=photo_count,
+            photo_interval_s=photo_interval_s,
+        )
+
         return mp4_path, photo_paths
+
+    def _extract_video_photos(
+            self,
+            video_path: Path,
+            seconds: int,
+            photo_count: int,
+            photo_interval_s: float,
+    ) -> list[Path]:
+        """
+        Extract JPG snapshots from a recorded MP4 using ffmpeg.
+        """
+        photo_paths: list[Path] = []
+
+        for i in range(photo_count):
+            timestamp_s = i * photo_interval_s
+            if timestamp_s >= seconds:
+                break
+
+            photo_path = self.footage_dir / f"{timestamp_name()}_{i}.jpg"
+
+            subprocess.run(
+                [
+                    "ffmpeg",
+                    "-y",
+                    "-ss",
+                    str(timestamp_s),
+                    "-i",
+                    str(video_path),
+                    "-frames:v",
+                    "1",
+                    "-q:v",
+                    "2",
+                    str(photo_path),
+                ],
+                check=True,
+            )
+
+            photo_paths.append(photo_path)
+            logger.info(
+                "Extracted video-frame photo: path=%s timestamp=%.2fs",
+                photo_path,
+                timestamp_s,
+            )
+
+        return photo_paths
 
     def stop_camera(self) -> None:
         """
