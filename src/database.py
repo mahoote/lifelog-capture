@@ -43,7 +43,7 @@ def init_database() -> None:
             CREATE TABLE IF NOT EXISTS capture_event (
                 id TEXT PRIMARY KEY,
                 started_at TEXT NOT NULL,
-                ended_at TEXT NOT NULL,
+                ended_at TEXT,
                 motion_state TEXT NOT NULL
             )
             """
