@@ -168,7 +168,7 @@ class CameraDriver:
         self._switch_mode("video")
 
         # Give the camera pipeline time to settle after still -> video mode switch.
-        sleep(1)
+        sleep(3)
 
         encoder = H264Encoder(bitrate=8_000_000, repeat=True)
         output = FileOutput(str(raw_path))
