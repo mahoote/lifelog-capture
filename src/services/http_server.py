@@ -1,3 +1,4 @@
+from asyncio import log
 from pathlib import Path
 
 from fastapi.encoders import jsonable_encoder
@@ -39,7 +40,11 @@ def download_footage(file_id: str):
     if item is None:
         raise HTTPException(status_code=400, detail="File not found in database")
 
+    print(f"Downloading footage item {file_id} from {item.file_path}")
+
     file_path = Path(item.file_path)
+
+    print(f"Checking if file exists at {file_path}")
 
     if not file_path.exists() or not file_path.is_file():
         raise HTTPException(status_code=400, detail="File missing on disk")
