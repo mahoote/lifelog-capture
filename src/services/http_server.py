@@ -37,12 +37,12 @@ def download_footage(file_id: str):
     item = storage.get_footage_item(file_id)
 
     if item is None:
-        raise HTTPException(status_code=404, detail="File not found in database")
+        raise HTTPException(status_code=400, detail="File not found in database")
 
     file_path = Path(item.file_path)
 
     if not file_path.exists() or not file_path.is_file():
-        raise HTTPException(status_code=404, detail="File missing on disk")
+        raise HTTPException(status_code=400, detail="File missing on disk")
 
     return FileResponse(
         path=file_path,
@@ -56,7 +56,7 @@ def handle_ack(request: AckRequest):
     success = storage.update_footage_state(request.file_id, FootageState.ACKED)
 
     if not success:
-        raise HTTPException(status_code=404, detail="File not found")
+        raise HTTPException(status_code=400, detail="File not found")
 
     return {"ok": True}
 
