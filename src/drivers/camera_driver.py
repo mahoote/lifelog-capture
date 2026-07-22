@@ -158,7 +158,7 @@ class CameraDriver:
         self._switch_mode("video")
 
         # Give the camera pipeline time to settle after still -> video mode switch.
-        sleep(3)
+        sleep(5)
 
         # Drain a few frames so the encoder does not start on unstable buffers.
         for _ in range(10):

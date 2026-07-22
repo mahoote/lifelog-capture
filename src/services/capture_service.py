@@ -1,6 +1,6 @@
 import logging
 import threading
-from time import monotonic
+from time import monotonic, sleep
 from uuid import UUID
 
 from src.drivers.camera_driver import CameraDriver
@@ -202,13 +202,18 @@ class CaptureService:
                                                                  ended_at=None)
             capture_event_id = capture_event.id if capture_event is not None else None
 
+            for i in range(2):
+                self._capture_photo(capture_event_id=capture_event_id, role=FootageRole.BURST, sequence_index=i)
+                if i < 1:
+                    sleep(2)
+
             footage_path = self._camera.capture_video(VIDEO_DURATION_SECONDS)
             logger.info(f"Captured video: {footage_path}")
             self.log_service.record_footage_taken()
 
             storage_service.save_footage_item(
                 capture_event_id=capture_event_id,
-                sequence_index=0,
+                sequence_index=2,
                 role=FootageRole.CONTEXT,
                 file_path=footage_path,
                 size_bytes=footage_path.stat().st_size,
@@ -216,8 +221,10 @@ class CaptureService:
                 duration_s=VIDEO_DURATION_SECONDS,
             )
 
-            for i in range(1, 4):
+            for i in range(3, 5):
                 self._capture_photo(capture_event_id=capture_event_id, role=FootageRole.BURST, sequence_index=i)
+                if i < 4:
+                    sleep(2)
 
             storage_service.update_capture_ended(
                 id=capture_event_id,
