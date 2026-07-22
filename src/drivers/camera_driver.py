@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+import subprocess
 from pathlib import Path
 from time import sleep, monotonic
 from typing import Literal
@@ -12,12 +12,12 @@ try:
     from libcamera import Transform
     from picamera2 import Picamera2
     from picamera2.encoders import H264Encoder
-    from picamera2.outputs import FfmpegOutput
+    from picamera2.outputs import FileOutput
 except Exception as exc:  # Allows parent code to inspect camera availability.
     Transform = None  # type: ignore[assignment]
     Picamera2 = None  # type: ignore[assignment]
     H264Encoder = None  # type: ignore[assignment]
-    FfmpegOutput = None  # type: ignore[assignment]
+    FileOutput = None  # type: ignore[assignment]
     PICAMERA_IMPORT_ERROR = exc
 else:
     PICAMERA_IMPORT_ERROR = None
@@ -137,8 +137,8 @@ class CameraDriver:
             seconds: int,
     ) -> Path:
         """
-        Record a video clip, save it under footage/videos/<timestamp>.h264,
-        and return the saved file path along with the time recording ended.
+        Record a video clip as raw H264, remux it to MP4 with a fixed framerate,
+        and return the saved MP4 path.
 
         The camera switches to video mode, records for the specified
         duration, and stores the recording on disk.
@@ -147,12 +147,11 @@ class CameraDriver:
             seconds: Length of the recording in seconds.
 
         Returns:
-            tuple[Path, datetime]:
-                - Path to the saved video file.
-                - UTC timestamp when recording finished.
+            Path: The path to the saved MP4 video file.
         """
 
-        out_path = self.videos_dir / f"{timestamp_name()}.mp4"
+        raw_path = self.videos_dir / f"{timestamp_name()}.h264"
+        mp4_path = raw_path.with_suffix(".mp4")
 
         self._ensure_camera_available()
         self._switch_mode("video")
@@ -160,14 +159,10 @@ class CameraDriver:
         # Give the camera pipeline time to settle after still -> video mode switch.
         sleep(5)
 
-        # Drain a few frames so the encoder does not start on unstable buffers.
-        for _ in range(10):
-            self.picam2.capture_array("main")
+        encoder = H264Encoder(bitrate=8_000_000, repeat=True)
+        output = FileOutput(str(raw_path))
 
-        encoder = H264Encoder(bitrate=8_000_000)
-        output = FfmpegOutput(str(out_path))
-
-        logger.info("Video recording started: %s", out_path)
+        logger.info("Video recording started: %s", raw_path)
 
         recording_started = monotonic()
         self.picam2.start_recording(encoder, output)
@@ -179,13 +174,32 @@ class CameraDriver:
 
         logger.info(
             "Video recording stopped: path=%s requested=%ss elapsed=%.2fs size=%s",
-            out_path,
+            raw_path,
             seconds,
             recording_elapsed,
-            out_path.stat().st_size if out_path.exists() else None,
+            raw_path.stat().st_size if raw_path.exists() else None,
         )
 
-        return out_path
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-framerate",
+                "30",
+                "-i",
+                str(raw_path),
+                "-c",
+                "copy",
+                str(mp4_path),
+            ],
+            check=True,
+        )
+
+        raw_path.unlink(missing_ok=True)
+
+        logger.info("Converted video to MP4: %s", mp4_path)
+
+        return mp4_path
 
     def stop_camera(self) -> None:
         """
