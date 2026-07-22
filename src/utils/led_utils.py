@@ -4,7 +4,7 @@ import threading
 
 LED_GPIO = 4
 led = PWMLED(LED_GPIO)
-LED_BRIGHTNESS = 0.3
+LED_BRIGHTNESS = 0.5
 
 
 def led_blink_amount(amount: int, on_period_s: float = 0.1, off_period_s: float = 0.1):

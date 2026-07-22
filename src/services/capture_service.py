@@ -1,6 +1,6 @@
 import logging
 import threading
-from time import monotonic
+from time import monotonic, sleep
 from uuid import UUID
 
 from src.drivers.camera_driver import CameraDriver
@@ -38,6 +38,7 @@ class CaptureService:
         self._capture_thread: threading.Thread | None = None
         self._motion_thread: threading.Thread | None = None
         self._stop_capture_event = threading.Event()
+        self._pause_motion_event = threading.Event()
 
     def start(self) -> None:
         if self._camera.camera_error:
@@ -53,7 +54,7 @@ class CaptureService:
 
         self._motion_thread = threading.Thread(
             target=self.motion_worker.run,
-            args=(self._stop_capture_event,),
+            args=(self._stop_capture_event, self._pause_motion_event),
             name="motion-detector",
             daemon=True,
         )
@@ -116,13 +117,16 @@ class CaptureService:
                 )
 
                 if should_capture:
+                    self._pause_motion_event.set()
+
                     match motion_state:
                         case MotionState.ACTIVE:
                             self._capture_video()
                         case _:
-                            self._capture_photo(capture_event_id=None, role=None, sequence_index=None)
+                            self._capture_photo()
 
                     last_capture_at = monotonic()
+                    self._pause_motion_event.clear()
 
         except Exception as e:
             errored = True
@@ -136,34 +140,34 @@ class CaptureService:
                 self._camera.stop_camera()
 
         if errored and not self._stop_capture_event.is_set():
+            self._pause_motion_event.set()
+
             led_blink_loop(
                 stop_event=self._stop_capture_event,
                 on_period_s=0.5,
                 off_period_s=0.5,
             )
 
-    def _capture_photo(self, capture_event_id: UUID | None, role: FootageRole | None,
-                       sequence_index: int | None) -> None:
+    def _capture_photo(self) -> None:
         """
         Captures a photo and saves it to the storage.
         """
         capture_ended_at = timestamp_utc()  # Gets the same timestamp as the photo capture for consistency
-        footage_path = self._camera.capture_jpeg()
+        footage_path = self._camera.capture_jpg()
         logger.info(f"Captured photo: {footage_path}")
 
         self.log_service.record_footage_taken()
 
-        if capture_event_id is None:
-            capture_event = storage_service.create_capture_event(
-                motion_state=self.motion_service.state,
-                ended_at=capture_ended_at,
-            )
-            capture_event_id = capture_event.id if capture_event is not None else None
+        capture_event = storage_service.create_capture_event(
+            motion_state=self.motion_service.state,
+            ended_at=capture_ended_at,
+        )
+        capture_event_id = capture_event.id if capture_event is not None else None
 
         storage_service.save_footage_item(
             capture_event_id=capture_event_id,
-            sequence_index=sequence_index if sequence_index is not None else 0,
-            role=role if role is not None else FootageRole.CANDIDATE,
+            sequence_index=0,
+            role=FootageRole.CANDIDATE,
             file_path=footage_path,
             size_bytes=footage_path.stat().st_size,
             footage_type=FootageType.PHOTO,
@@ -192,25 +196,44 @@ class CaptureService:
         video_blink_thread.start()
 
         try:
-            footage_path, capture_end_at = self._camera.capture_video(VIDEO_DURATION_SECONDS)
+            capture_event = storage_service.create_capture_event(motion_state=self.motion_service.state,
+                                                                 ended_at=None)
+            capture_event_id = capture_event.id if capture_event is not None else None
+
+            footage_path, photo_paths = self._camera.capture_video_with_extracted_photos(
+                seconds=VIDEO_DURATION_SECONDS,
+                photo_count=3,
+                photo_interval_s=3.0,
+            )
             logger.info(f"Captured video: {footage_path}")
             self.log_service.record_footage_taken()
 
-            capture_event = storage_service.create_capture_event(motion_state=self.motion_service.state,
-                                                                 ended_at=capture_end_at.isoformat())
-            capture_event_id = capture_event.id if capture_event is not None else None
-
-            for i in range(3):
-                self._capture_photo(capture_event_id=capture_event_id, role=FootageRole.BURST, sequence_index=i)
+            for i, photo_path in enumerate(photo_paths):
+                logger.info(f"Extracted burst photo from video: {photo_path}")
+                self.log_service.record_footage_taken()
+                storage_service.save_footage_item(
+                    capture_event_id=capture_event_id,
+                    sequence_index=i,
+                    role=FootageRole.BURST,
+                    file_path=photo_path,
+                    size_bytes=photo_path.stat().st_size,
+                    footage_type=FootageType.PHOTO,
+                    duration_s=None,
+                )
 
             storage_service.save_footage_item(
                 capture_event_id=capture_event_id,
-                sequence_index=3,
+                sequence_index=len(photo_paths),
                 role=FootageRole.CONTEXT,
                 file_path=footage_path,
                 size_bytes=footage_path.stat().st_size,
                 footage_type=FootageType.VIDEO,
                 duration_s=VIDEO_DURATION_SECONDS,
+            )
+
+            storage_service.update_capture_ended(
+                id=capture_event_id,
+                ended_at=timestamp_utc(),
             )
 
 

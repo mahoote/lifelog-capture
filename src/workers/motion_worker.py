@@ -26,7 +26,7 @@ class MotionWorker:
         self.imu = imu
         self.detector = detector
 
-    def run(self, stop_event: threading.Event) -> None:
+    def run(self, stop_capture_event: threading.Event, pause_motion_event: threading.Event) -> None:
         """
         Start the IMU, calibrate, then update motion state until stopped.
 
@@ -39,8 +39,9 @@ class MotionWorker:
         try:
             self.detector.calibrate_idle()
 
-            while not stop_event.is_set():
-                self.detector.update()
+            while not stop_capture_event.is_set():
+                if not pause_motion_event.is_set():
+                    self.detector.update()
                 sleep(self.detector.sample_interval_s)
         finally:
             logger.info("Stopping motion service")

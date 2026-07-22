@@ -81,17 +81,30 @@ class TransferService:
             self._transfer_blink_thread = None
 
     def _run_transfer(self) -> None:
-        """Start HTTP and begin monitoring transfer readiness."""
+        """Start HTTP once internet is available.
+
+        If internet is not available, ask the Wi-Fi service to reconnect to a
+        saved/known network, then keep retrying every 10 seconds until either
+        internet comes back or transfer mode is stopped.
+        """
         logger.info("Starting transfer mode")
 
-        if not has_internet_connection():
-            logger.error("No internet connection available. Transfer server will not start.")
+        while not self._stop_transfer_event.is_set():
+            if has_internet_connection():
+                self._transfer_status = TransferBlinkStatus.RUNNING
+                self._start_http_server()
+                return
+
+            logger.error("No internet connection available. Trying to reconnect Wi-Fi.")
             self._transfer_status = TransferBlinkStatus.NO_INTERNET
-            return
 
-        self._transfer_status = TransferBlinkStatus.RUNNING
+            if self.wifi_service.reconnect():
+                logger.info("Wi-Fi reconnect started. Checking internet again.")
+            else:
+                logger.warning("No saved Wi-Fi connection could be started.")
 
-        self._start_http_server()
+            if self._stop_transfer_event.wait(timeout=10):
+                return
 
     def _start_http_server(self) -> None:
         """Start the FastAPI HTTP server."""

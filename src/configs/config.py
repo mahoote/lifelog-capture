@@ -21,7 +21,7 @@ DEFAULT_CAPTURE_INTERVAL_SECONDS = 60  # User is moving, so we can take photos m
 VIDEO_CAPTURE_INTERVAL_SECONDS = 60  # User is moving a lot, so we can capture videos.
 
 # Length of each video clip when motion is detected.
-VIDEO_DURATION_SECONDS = 10
+VIDEO_DURATION_SECONDS = 15
 
 # Still photo resolution.
 PHOTO_SIZE = (1920, 1080)

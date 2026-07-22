@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import logging
+import subprocess
 from pathlib import Path
-from time import sleep
+from time import sleep, monotonic
 from typing import Literal
 
 from src.utils.date_utils import timestamp_name
@@ -11,17 +12,19 @@ try:
     from libcamera import Transform
     from picamera2 import Picamera2
     from picamera2.encoders import H264Encoder
-    from picamera2.outputs import FfmpegOutput
+    from picamera2.outputs import FileOutput
 except Exception as exc:  # Allows parent code to inspect camera availability.
     Transform = None  # type: ignore[assignment]
     Picamera2 = None  # type: ignore[assignment]
     H264Encoder = None  # type: ignore[assignment]
-    FfmpegOutput = None  # type: ignore[assignment]
+    FileOutput = None  # type: ignore[assignment]
     PICAMERA_IMPORT_ERROR = exc
 else:
     PICAMERA_IMPORT_ERROR = None
 
 from src.configs.config import PHOTO_SIZE, VIDEO_SIZE
+
+logger = logging.getLogger(__name__)
 
 
 class CameraDriver:
@@ -107,67 +110,159 @@ class CameraDriver:
         sleep(1)
         return True
 
-    def capture_jpeg(self) -> Path:
+    def capture_jpg(self) -> Path:
         """
-        Capture a JPEG image, save it under footage/<timestamp>.jpeg,
+        Capture a JPG image, save it under footage/<timestamp>.jpg,
         and return the saved file path.
 
-        The camera switches to still mode, captures a JPEG image,
+        The camera switches to still mode, captures a JPG image,
         temporarily stores it on disk, and then reads the file back
         into memory.
 
         Returns:
-            Path: The path to the saved JPEG image.
+            Path: The path to the saved JPG image.
         """
-        out_path = self.footage_dir / f"{timestamp_name()}.jpeg"
+        out_path = self.footage_dir / f"{timestamp_name()}.jpg"
 
         self._ensure_camera_available()
         self._switch_mode("photo")
         self.picam2.capture_file(
             str(out_path),
-            format="jpeg",
+            format="jpg",
         )
         return out_path
 
     def capture_video(
             self,
             seconds: int,
-    ) -> tuple[Path, datetime]:
+    ) -> Path:
         """
-        Record a video clip, save it under footage/videos/<timestamp>.h264,
-        and return the saved file path along with the time recording ended.
-
-        The camera switches to video mode, records for the specified
-        duration, and stores the recording on disk.
-
-        Args:
-            seconds: Length of the recording in seconds.
-
-        Returns:
-            tuple[Path, datetime]:
-                - Path to the saved video file.
-                - UTC timestamp when recording finished.
+        Record a video clip as raw H264, remux it to MP4 with a fixed framerate,
+        and return the saved MP4 path.
         """
+        video_path, _photo_paths = self.capture_video_with_extracted_photos(
+            seconds=seconds,
+            photo_count=0,
+        )
+        return video_path
 
-        out_path = self.videos_dir / f"{timestamp_name()}.mp4"
+    def capture_video_with_extracted_photos(
+            self,
+            seconds: int,
+            photo_count: int = 3,
+            photo_interval_s: float = 3.0,
+    ) -> tuple[Path, list[Path]]:
+        """
+        Record a video and extract JPG snapshots from the final MP4.
+
+        The camera only records video during the capture window. Photos are
+        extracted afterwards with ffmpeg so the encoder is not interrupted while
+        recording.
+        """
+        raw_path = self.videos_dir / f"{timestamp_name()}.h264"
+        mp4_path = raw_path.with_suffix(".mp4")
 
         self._ensure_camera_available()
-
         self._switch_mode("video")
 
-        # Let exposure, gain, and buffers settle after switching mode.
-        sleep(2)
+        # Give the camera pipeline time to settle after still -> video mode switch.
+        sleep(3)
 
-        encoder = H264Encoder(bitrate=8_000_000)
-        output = FfmpegOutput(str(out_path))
+        encoder = H264Encoder(bitrate=8_000_000, repeat=True)
+        output = FileOutput(str(raw_path))
 
+        logger.info("Video recording started: %s", raw_path)
+
+        recording_started = monotonic()
         self.picam2.start_recording(encoder, output)
-        sleep(seconds)
-        self.picam2.stop_recording()
 
-        capture_end_at = datetime.now(timezone.utc)
+        try:
+            sleep(seconds)
+        finally:
+            self.picam2.stop_recording()
 
-        return out_path, capture_end_at
+        recording_elapsed = monotonic() - recording_started
+
+        logger.info(
+            "Video recording stopped: path=%s requested=%ss elapsed=%.2fs size=%s",
+            raw_path,
+            seconds,
+            recording_elapsed,
+            raw_path.stat().st_size if raw_path.exists() else None,
+        )
+
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-framerate",
+                "30",
+                "-i",
+                str(raw_path),
+                "-c",
+                "copy",
+                str(mp4_path),
+            ],
+            check=True,
+        )
+
+        raw_path.unlink(missing_ok=True)
+
+        logger.info("Converted video to MP4: %s", mp4_path)
+
+        photo_paths = self._extract_video_photos(
+            video_path=mp4_path,
+            seconds=seconds,
+            photo_count=photo_count,
+            photo_interval_s=photo_interval_s,
+        )
+
+        return mp4_path, photo_paths
+
+    def _extract_video_photos(
+            self,
+            video_path: Path,
+            seconds: int,
+            photo_count: int,
+            photo_interval_s: float,
+    ) -> list[Path]:
+        """
+        Extract JPG snapshots from a recorded MP4 using ffmpeg.
+        """
+        photo_paths: list[Path] = []
+
+        for i in range(photo_count):
+            timestamp_s = i * photo_interval_s
+            if timestamp_s >= seconds:
+                break
+
+            photo_path = self.footage_dir / f"{timestamp_name()}_{i}.jpg"
+
+            subprocess.run(
+                [
+                    "ffmpeg",
+                    "-y",
+                    "-ss",
+                    str(timestamp_s),
+                    "-i",
+                    str(video_path),
+                    "-frames:v",
+                    "1",
+                    "-q:v",
+                    "2",
+                    str(photo_path),
+                ],
+                check=True,
+            )
+
+            photo_paths.append(photo_path)
+            logger.info(
+                "Extracted video-frame photo: path=%s timestamp=%.2fs",
+                photo_path,
+                timestamp_s,
+            )
+
+        return photo_paths
 
     def stop_camera(self) -> None:
         """

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 
 
 def timestamp_name() -> str:
@@ -9,7 +9,7 @@ def timestamp_name() -> str:
 
 
 def timestamp_utc() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now().isoformat()
 
 
 def parse_datetime(value: str | None) -> datetime | None:
