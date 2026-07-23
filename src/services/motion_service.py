@@ -31,7 +31,9 @@ class MotionService:
             idle_score: float = 0.10,
             active_hold_s: float = 0.6,
             idle_hold_s: float = 2.0,
-            state_cooldown_s: float = 5.0,
+            active_confirm_s: float = 1.5,
+            default_confirm_s: float = 5.0,
+            idle_confirm_s: float = 10.0,
     ):
         """
         Creates the motion classification logic.
@@ -40,7 +42,9 @@ class MotionService:
         - idle_score: below this for idle_hold_s means idle
         - active_score: above this for active_hold_s means active
         - between the two means default
-        - state_cooldown_s: minimum seconds between state changes
+        - active_confirm_s: how long active must stay requested before switching
+        - default_confirm_s: how long default must stay requested before switching
+        - idle_confirm_s: how long idle must stay requested before switching
 
         Walking should usually reach ACTIVE with the default active_score.
         If walking still stays as DEFAULT, reduce active_score further.
@@ -51,7 +55,11 @@ class MotionService:
         self.idle_score = idle_score
         self.active_hold_s = active_hold_s
         self.idle_hold_s = idle_hold_s
-        self.state_cooldown_s = state_cooldown_s
+        self.state_confirm_s = {
+            MotionState.ACTIVE: active_confirm_s,
+            MotionState.DEFAULT: default_confirm_s,
+            MotionState.IDLE: idle_confirm_s,
+        }
 
         self.state = MotionState.DEFAULT
         self.score = 0.0
@@ -60,7 +68,8 @@ class MotionService:
         self._baseline_gyro_dps = 0.0
         self._idle_since: float | None = None
         self._active_since: float | None = None
-        self._last_state_change_at = 0.0
+        self._pending_state: MotionState | None = None
+        self._pending_state_since: float | None = None
         self._state_change_listener: Callable[[MotionState], None] | None = None
 
     def set_state_change_listener(
@@ -138,17 +147,30 @@ class MotionService:
     def _set_state(self, new_state: MotionState, force: bool = False) -> None:
         """Update the motion state and log only when the mode changes."""
         if new_state == self.state:
+            self._pending_state = None
+            self._pending_state_since = None
             return
 
         now = time()
-        seconds_since_change = now - self._last_state_change_at
 
-        if not force and seconds_since_change < self.state_cooldown_s:
-            return
+        if not force:
+            if self._pending_state != new_state:
+                self._pending_state = new_state
+                self._pending_state_since = now
+                return
+
+            if self._pending_state_since is None:
+                self._pending_state_since = now
+                return
+
+            required_confirm_s = self.state_confirm_s[new_state]
+            if now - self._pending_state_since < required_confirm_s:
+                return
 
         previous_state = self.state
         self.state = new_state
-        self._last_state_change_at = now
+        self._pending_state = None
+        self._pending_state_since = None
 
         logger.info(
             "Motion mode changed: %s -> %s, score=%.2f",
