@@ -13,6 +13,7 @@ States:
 from __future__ import annotations
 
 import logging
+from collections import deque
 from time import sleep, time
 from typing import Callable
 
@@ -27,38 +28,46 @@ class MotionService:
             self,
             imu: BMI160Driver,
             sample_rate_hz: float = 20.0,
-            active_score: float = 0.45,
-            idle_score: float = 0.10,
+            active_enter_score: float = 0.45,
+            active_exit_score: float = 0.35,
+            idle_enter_score: float = 0.15,
+            idle_exit_score: float = 0.25,
             active_hold_s: float = 0.6,
             idle_hold_s: float = 2.0,
+            idle_window_s: float = 10.0,
+            idle_required_ratio: float = 0.80,
             active_confirm_s: float = 1.5,
             default_confirm_s: float = 5.0,
-            idle_confirm_s: float = 10.0,
     ):
         """
         Creates the motion classification logic.
 
         The thresholds are intentionally simple and easy to tune:
-        - idle_score: below this for idle_hold_s means idle
-        - active_score: above this for active_hold_s means active
-        - between the two means default
+        - idle_enter_score: below this counts as idle movement
+        - idle_exit_score: above this cancels pending idle
+        - active_enter_score: above this counts as active movement
+        - active_exit_score: below this cancels pending active
+        - idle_window_s and idle_required_ratio: allow mostly-idle behaviour to enter idle
+        - between idle and active means default
         - active_confirm_s: how long active must stay requested before switching
         - default_confirm_s: how long default must stay requested before switching
-        - idle_confirm_s: how long idle must stay requested before switching
 
         Walking should usually reach ACTIVE with the default active_score.
         If walking still stays as DEFAULT, reduce active_score further.
         """
         self.imu = imu
         self.sample_interval_s = 1.0 / sample_rate_hz
-        self.active_score = active_score
-        self.idle_score = idle_score
+        self.active_enter_score = active_enter_score
+        self.active_exit_score = active_exit_score
+        self.idle_enter_score = idle_enter_score
+        self.idle_exit_score = idle_exit_score
         self.active_hold_s = active_hold_s
         self.idle_hold_s = idle_hold_s
+        self.idle_window_s = idle_window_s
+        self.idle_required_ratio = idle_required_ratio
         self.state_confirm_s = {
             MotionState.ACTIVE: active_confirm_s,
             MotionState.DEFAULT: default_confirm_s,
-            MotionState.IDLE: idle_confirm_s,
         }
 
         self.state = MotionState.DEFAULT
@@ -68,6 +77,7 @@ class MotionService:
         self._baseline_gyro_dps = 0.0
         self._idle_since: float | None = None
         self._active_since: float | None = None
+        self._idle_window: deque[tuple[float, bool]] = deque()
         self._pending_state: MotionState | None = None
         self._pending_state_since: float | None = None
         self._state_change_listener: Callable[[MotionState], None] | None = None
@@ -106,6 +116,7 @@ class MotionService:
         self.score = 0.0
         self._idle_since = None
         self._active_since = None
+        self._idle_window.clear()
         self._set_state(MotionState.IDLE, force=True)
 
     def update(self) -> MotionState:
@@ -124,25 +135,53 @@ class MotionService:
 
         now = time()
 
-        if self.score >= self.active_score:
+        is_idle_sample = self.score <= self.idle_enter_score
+        self._record_idle_sample(now, is_idle_sample)
+
+        if self.score >= self.active_enter_score:
             if self._active_since is None:
                 self._active_since = now
             self._idle_since = None
-        elif self.score <= self.idle_score:
+        elif self.score <= self.idle_enter_score:
             if self._idle_since is None:
                 self._idle_since = now
             self._active_since = None
         else:
-            self._idle_since = None
-            self._active_since = None
+            if self.score > self.idle_exit_score:
+                self._idle_since = None
+            if self.score < self.active_exit_score:
+                self._active_since = None
             self._set_state(MotionState.DEFAULT)
 
         if self._active_since is not None and now - self._active_since >= self.active_hold_s:
             self._set_state(MotionState.ACTIVE)
         elif self._idle_since is not None and now - self._idle_since >= self.idle_hold_s:
             self._set_state(MotionState.IDLE)
+        elif self._idle_window_is_idle():
+            self._set_state(MotionState.IDLE)
 
         return self.state
+
+    def _record_idle_sample(self, now: float, is_idle_sample: bool) -> None:
+        """Track whether recent samples were idle enough for mostly-still sitting."""
+        self._idle_window.append((now, is_idle_sample))
+
+        while self._idle_window and now - self._idle_window[0][0] > self.idle_window_s:
+            self._idle_window.popleft()
+
+    def _idle_window_is_idle(self) -> bool:
+        """Return True if the recent window is mostly idle."""
+        if not self._idle_window:
+            return False
+
+        newest_at = self._idle_window[-1][0]
+        oldest_at = self._idle_window[0][0]
+        if newest_at - oldest_at < self.idle_window_s:
+            return False
+
+        idle_count = sum(1 for _, is_idle_sample in self._idle_window if is_idle_sample)
+        idle_ratio = idle_count / len(self._idle_window)
+        return idle_ratio >= self.idle_required_ratio
 
     def _set_state(self, new_state: MotionState, force: bool = False) -> None:
         """Update the motion state and log only when the mode changes."""
@@ -153,7 +192,7 @@ class MotionService:
 
         now = time()
 
-        if not force:
+        if not force and new_state in self.state_confirm_s:
             if self._pending_state != new_state:
                 self._pending_state = new_state
                 self._pending_state_since = now
