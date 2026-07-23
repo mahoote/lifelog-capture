@@ -27,7 +27,7 @@ VIDEO_DURATION_SECONDS = 15
 PHOTO_SIZE = (1920, 1080)
 
 # Video recording resolution.
-VIDEO_SIZE = (1280, 720)
+VIDEO_SIZE = (1920, 1080)
 
 
 @dataclass(frozen=True)
