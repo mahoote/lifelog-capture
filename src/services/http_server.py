@@ -1,16 +1,27 @@
-from asyncio import log
 from pathlib import Path
 
-from fastapi.encoders import jsonable_encoder
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse
 from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import FileResponse
 
 from src.services import storage_service as storage
 from src.services.wifi_service import WifiService
 from src.types.footage_item import FootageState
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:8081",
+        "http://127.0.0.1:8081",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class AckRequest(BaseModel):
